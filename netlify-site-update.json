@@ -1,0 +1,9 @@
+{
+  "site_id": "da2317c0-2337-4217-8d70-b6a68d4c2aaa",
+  "build_settings": {
+    "cmd": "npm run build",
+    "dir": "",
+    "base": "",
+    "provider": null
+  }
+}

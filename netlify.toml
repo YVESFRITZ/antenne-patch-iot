@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = "AIzaSyB0zcm-6bLyktc7syhI8fWyFE_pMOfoSI0"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
