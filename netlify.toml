@@ -7,3 +7,6 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Redirections Next.js gérées par le plugin
+# Ne pas définir "publish" — le plugin Next.js gère le dossier de sortie
