@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Crosshair, Layers, MapPin, Navigation } from "lucide-react";
 import type { Antenna, Site } from "@/lib/types";
 import { statusColor, statusLabel } from "@/lib/utils";
@@ -17,6 +17,8 @@ interface MapViewProps {
   antennas: Antenna[];
   selectedAntennaId: string | null;
   onSelectAntenna: (id: string | null) => void;
+  linkTxId?: string | null;
+  linkRxId?: string | null;
 }
 
 const MAP_HEIGHT = MAP_DEFAULTS.minHeight;
@@ -26,12 +28,20 @@ export default function MapView({
   antennas,
   selectedAntennaId,
   onSelectAntenna,
+  linkTxId = null,
+  linkRxId = null,
 }: MapViewProps) {
   const apiKey = GOOGLE_MAPS_CONFIG.apiKey;
   const { position: userPosition, loading: geoLoading, error: geoError, refresh } = useGeolocation();
   const [mode, setMode] = useState<"google" | "osm" | "interactive">("osm");
 
   const center = useMemo(() => userPosition ?? DEFAULT_CENTER, [userPosition]);
+
+  // Le tracé de liaison n'est visible que sur la carte Google interactive :
+  // on bascule automatiquement quand une liaison TX→RX est sélectionnée.
+  useEffect(() => {
+    if (linkTxId && linkRxId) setMode("google");
+  }, [linkTxId, linkRxId]);
 
   const { sites: mapSites, antennas: mapAntennas } = useMemo(() => {
     if (!userPosition) return { sites, antennas };
@@ -67,6 +77,8 @@ export default function MapView({
           antennas={mapAntennas}
           selectedAntennaId={selectedAntennaId}
           onSelectAntenna={onSelectAntenna}
+          linkTxId={linkTxId}
+          linkRxId={linkRxId}
           onFallback={() => setMode("osm")}
         />
       ) : mode === "osm" ? (

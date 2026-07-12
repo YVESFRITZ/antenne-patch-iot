@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Map,
   Radio,
+  Ruler,
   Settings,
   Wifi,
 } from "lucide-react";
@@ -22,6 +23,7 @@ const navItems = [
   { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { id: "map", label: "Carte des sites", icon: Map },
   { id: "antennas", label: "Antennes", icon: Antenna },
+  { id: "link", label: "Liaison / Distance", icon: Ruler },
   { id: "alerts", label: "Alertes", icon: Bell },
   { id: "settings", label: "Paramètres", icon: Settings },
 ];

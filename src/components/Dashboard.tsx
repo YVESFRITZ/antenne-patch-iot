@@ -8,6 +8,7 @@ import StatsCards from "./StatsCards";
 import AntennaPanel from "./AntennaPanel";
 import AlertsList from "./AlertsList";
 import AntennaList from "./AntennaList";
+import LinkCalculator from "./LinkCalculator";
 import { RefreshCw, Search } from "lucide-react";
 
 const MapView = dynamic(() => import("./MapView"), {
@@ -29,6 +30,8 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAntennaId, setSelectedAntennaId] = useState<string | null>(null);
+  const [linkTxId, setLinkTxId] = useState<string | null>(null);
+  const [linkRxId, setLinkRxId] = useState<string | null>(null);
   const [telemetry, setTelemetry] = useState<TelemetryPoint[]>([]);
   const [search, setSearch] = useState("");
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
@@ -105,6 +108,7 @@ export default function Dashboard() {
               {activeTab === "dashboard" && "Tableau de bord"}
               {activeTab === "map" && "Carte des sites IoT"}
               {activeTab === "antennas" && "Gestion des antennes"}
+              {activeTab === "link" && "Liaison — distance émetteur / récepteur"}
               {activeTab === "alerts" && "Centre d'alertes"}
               {activeTab === "settings" && "Paramètres"}
             </h2>
@@ -132,6 +136,8 @@ export default function Dashboard() {
                   antennas={antennas}
                   selectedAntennaId={selectedAntennaId}
                   onSelectAntenna={setSelectedAntennaId}
+                  linkTxId={linkTxId}
+                  linkRxId={linkRxId}
                 />
               </div>
               <div className="space-y-4">
@@ -165,6 +171,8 @@ export default function Dashboard() {
                 antennas={antennas}
                 selectedAntennaId={selectedAntennaId}
                 onSelectAntenna={setSelectedAntennaId}
+                linkTxId={linkTxId}
+                linkRxId={linkRxId}
               />
             </div>
           )}
@@ -203,6 +211,18 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === "link" && (
+            <div className="mt-4">
+              <LinkCalculator
+                antennas={antennas}
+                txId={linkTxId}
+                rxId={linkRxId}
+                onTxChange={setLinkTxId}
+                onRxChange={setLinkRxId}
+              />
             </div>
           )}
 
