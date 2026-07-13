@@ -1,17 +1,7 @@
 "use client";
 
-import {
-  Activity,
-  AlertTriangle,
-  Antenna,
-  Bell,
-  LayoutDashboard,
-  Map,
-  Radio,
-  Ruler,
-  Settings,
-  Wifi,
-} from "lucide-react";
+import { Activity, Radio, Wifi } from "lucide-react";
+import { navItems } from "@/lib/navItems";
 
 interface SidebarProps {
   activeTab: string;
@@ -19,18 +9,9 @@ interface SidebarProps {
   alertCount: number;
 }
 
-const navItems = [
-  { id: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { id: "map", label: "Carte des sites", icon: Map },
-  { id: "antennas", label: "Antennes", icon: Antenna },
-  { id: "link", label: "Liaison / Distance", icon: Ruler },
-  { id: "alerts", label: "Alertes", icon: Bell },
-  { id: "settings", label: "Paramètres", icon: Settings },
-];
-
 export default function Sidebar({ activeTab, onTabChange, alertCount }: SidebarProps) {
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-surface-overlay bg-surface-raised">
+    <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-surface-overlay bg-surface-raised lg:flex">
       <div className="border-b border-surface-overlay p-5">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 shadow-glow">
@@ -43,7 +24,7 @@ export default function Sidebar({ activeTab, onTabChange, alertCount }: SidebarP
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 p-3">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -51,13 +32,16 @@ export default function Sidebar({ activeTab, onTabChange, alertCount }: SidebarP
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${
+              className={`relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${
                 isActive
                   ? "bg-accent/10 text-accent shadow-glow"
                   : "text-slate-400 hover:bg-surface-overlay hover:text-white"
               }`}
             >
-              <Icon className="h-4 w-4" />
+              {isActive && (
+                <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-accent" />
+              )}
+              <Icon className="h-4 w-4 shrink-0" />
               <span className="flex-1 text-left">{item.label}</span>
               {item.id === "alerts" && alertCount > 0 && (
                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-status-offline px-1.5 text-xs font-bold text-white">

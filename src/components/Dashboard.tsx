@@ -4,12 +4,13 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import type { Alert, Antenna, DashboardStats, Site, TelemetryPoint } from "@/lib/types";
 import Sidebar from "./Sidebar";
+import MobileNav from "./MobileNav";
 import StatsCards from "./StatsCards";
 import AntennaPanel from "./AntennaPanel";
 import AlertsList from "./AlertsList";
 import AntennaList from "./AntennaList";
 import LinkCalculator from "./LinkCalculator";
-import { RefreshCw, Search } from "lucide-react";
+import { Radio, RefreshCw, Search } from "lucide-react";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -94,17 +95,21 @@ export default function Dashboard() {
   const activeAlertCount = alerts.filter((a) => !a.acknowledged).length;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0a0e14]">
+    <div className="flex h-[100dvh] overflow-hidden bg-[#0a0e14]">
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         alertCount={activeAlertCount}
       />
 
-      <main className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between border-b border-surface-overlay bg-surface-raised/50 px-6 py-4">
-          <div>
-            <h2 className="text-lg font-bold text-white">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex items-center justify-between gap-3 border-b border-surface-overlay bg-surface-raised/50 px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 shadow-glow lg:hidden">
+              <Radio className="h-5 w-5 text-accent" />
+            </div>
+            <div className="min-w-0">
+            <h2 className="truncate text-base font-bold text-white sm:text-lg">
               {activeTab === "dashboard" && "Tableau de bord"}
               {activeTab === "map" && "Carte des sites IoT"}
               {activeTab === "antennas" && "Gestion des antennes"}
@@ -112,20 +117,22 @@ export default function Dashboard() {
               {activeTab === "alerts" && "Centre d'alertes"}
               {activeTab === "settings" && "Paramètres"}
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="truncate text-xs text-slate-400">
               Dernière mise à jour : {lastUpdate.toLocaleTimeString("fr-FR")}
             </p>
+            </div>
           </div>
           <button
             onClick={fetchData}
-            className="flex items-center gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent transition-colors hover:bg-accent/20"
+            aria-label="Actualiser"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent transition-colors hover:bg-accent/20"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Actualiser
+            <span className="hidden sm:inline">Actualiser</span>
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 grid-bg">
+        <div className="flex-1 overflow-y-auto p-4 pb-24 grid-bg sm:p-6 lg:pb-6">
           {stats && <StatsCards stats={stats} />}
 
           {activeTab === "dashboard" && (
@@ -284,6 +291,12 @@ Content-Type: application/json
           )}
         </div>
       </main>
+
+      <MobileNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        alertCount={activeAlertCount}
+      />
     </div>
   );
 }

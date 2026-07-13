@@ -1,10 +1,18 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "AntennePatch IoT — Supervision des sites",
   description:
     "Plateforme de gestion IoT avec localisation et communication antennes en temps réel",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#0a0e14",
 };
 
 export default function RootLayout({
