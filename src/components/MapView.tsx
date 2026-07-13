@@ -115,7 +115,8 @@ export default function MapView({
               <span className="font-mono text-white">
                 {userPosition.lat.toFixed(4)}, {userPosition.lng.toFixed(4)}
               </span>
-              {" "}({userPosition.source === "gps" ? "GPS" : userPosition.source === "ip" ? "IP" : "défaut"})
+              {" "}({userPosition.source === "gps" ? "GPS" : userPosition.source === "ip" ? "IP" : "défaut"}
+              {userPosition.accuracy ? ` ±${Math.round(userPosition.accuracy)} m` : ""})
               {" · "}{mapAntennas.length} antennes
             </span>
           ) : (
