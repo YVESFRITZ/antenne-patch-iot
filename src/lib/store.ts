@@ -15,6 +15,12 @@ import { loadConfig, saveConfig, type StoredConfig } from "./persistence";
 
 const now = () => new Date().toISOString();
 
+/**
+ * Durée pendant laquelle la configuration en mémoire est considérée à jour.
+ * Passé ce délai, la prochaine requête revérifie la sauvegarde partagée.
+ */
+const CONFIG_CACHE_MS = 2000;
+
 /** Ramène une valeur dans un intervalle, en ignorant les entrées invalides. */
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -262,6 +268,10 @@ class IoTStore {
   /** Empêche plusieurs chargements simultanés de la configuration. */
   private loading: Promise<void> | null = null;
   private loaded = false;
+  /** Horodatage de la dernière config appliquée, pour ne rien réappliquer inutilement. */
+  private configStamp: string | null = null;
+  /** Dernière vérification du support de sauvegarde. */
+  private lastCheckAt = 0;
 
   constructor() {
     for (const antenna of this.antennas) {
@@ -271,33 +281,79 @@ class IoTStore {
   }
 
   /**
-   * Charge la configuration sauvegardée (sites, antennes, seuils).
-   * À appeler au début de chaque route API : sur un hébergement
-   * sans serveur, l'instance peut être neuve à chaque requête.
+   * Synchronise la configuration avec la sauvegarde partagée.
+   *
+   * Sur un hébergement sans serveur, plusieurs instances tournent en
+   * parallèle : une instance qui aurait chargé la configuration une seule
+   * fois servirait indéfiniment des données périmées. On revérifie donc
+   * régulièrement, et on ne réapplique la configuration que si elle a
+   * réellement changé (comparaison de l'horodatage).
+   *
+   * @param force relit immédiatement, sans attendre l'expiration du cache
+   *              (utilisé avant toute modification, pour ne pas écraser
+   *              les changements faits par une autre instance).
    */
-  async ensureLoaded(): Promise<void> {
-    if (this.loaded) return;
-    if (!this.loading) {
-      this.loading = (async () => {
-        const saved = await loadConfig();
-        if (saved) {
-          if (saved.sites?.length) this.sites = saved.sites;
-          if (saved.antennas?.length) {
-            this.antennas = saved.antennas;
-            for (const antenna of this.antennas) {
-              if (!this.telemetryHistory.has(antenna.id)) {
-                this.telemetryHistory.set(antenna.id, this.generateHistory(antenna));
-              }
-            }
-          }
-          if (saved.thresholds) {
-            this.thresholds = { ...DEFAULT_THRESHOLDS, ...saved.thresholds };
-          }
-        }
-        this.loaded = true;
-      })();
+  async ensureLoaded(force = false): Promise<void> {
+    const fresh = Date.now() - this.lastCheckAt < CONFIG_CACHE_MS;
+    if (!force && this.loaded && fresh) return;
+
+    // Une lecture déjà en cours : on attend son résultat plutôt que d'en lancer une autre.
+    if (this.loading) {
+      await this.loading;
+      return;
     }
-    await this.loading;
+
+    this.loading = (async () => {
+      const saved = await loadConfig();
+      this.lastCheckAt = Date.now();
+      this.loaded = true;
+      if (saved && saved.updatedAt !== this.configStamp) {
+        this.configStamp = saved.updatedAt;
+        this.applyConfig(saved);
+      }
+    })();
+
+    try {
+      await this.loading;
+    } finally {
+      this.loading = null;
+    }
+  }
+
+  /**
+   * Applique une configuration sauvegardée en préservant la télémétrie
+   * en cours : seuls les champs de configuration sont repris, les mesures
+   * vivantes (signal, température, batterie…) restent celles reçues des
+   * modules.
+   */
+  private applyConfig(saved: StoredConfig): void {
+    if (saved.thresholds) {
+      this.thresholds = { ...DEFAULT_THRESHOLDS, ...saved.thresholds };
+    }
+    if (saved.sites?.length) {
+      this.sites = saved.sites;
+    }
+    if (saved.antennas) {
+      const live = new Map(this.antennas.map((a) => [a.id, a]));
+      this.antennas = saved.antennas.map((config) => {
+        const current = live.get(config.id);
+        if (!current) return config;
+        return {
+          ...current,
+          siteId: config.siteId,
+          name: config.name,
+          type: config.type,
+          firmware: config.firmware,
+          lat: config.lat,
+          lng: config.lng,
+        };
+      });
+      for (const antenna of this.antennas) {
+        if (!this.telemetryHistory.has(antenna.id)) {
+          this.telemetryHistory.set(antenna.id, this.generateHistory(antenna));
+        }
+      }
+    }
   }
 
   /** Sauvegarde la configuration courante. */
@@ -309,6 +365,10 @@ class IoTStore {
       thresholds: this.thresholds,
       updatedAt: now(),
     };
+    // On retient l'horodatage écrit : inutile de réappliquer notre propre
+    // sauvegarde à la prochaine vérification.
+    this.configStamp = config.updatedAt;
+    this.lastCheckAt = Date.now();
     await saveConfig(config);
   }
 
@@ -408,6 +468,7 @@ class IoTStore {
   }
 
   async updateThresholds(patch: Partial<Thresholds>): Promise<Thresholds> {
+    await this.ensureLoaded(true);
     const merged = { ...this.thresholds, ...patch };
     // Bornes de sécurité : des valeurs absurdes rendraient les alertes inutiles.
     this.thresholds = {
@@ -423,6 +484,9 @@ class IoTStore {
   /* ---------------- Gestion des sites ---------------- */
 
   async addSite(input: SiteInput): Promise<Site> {
+    // Repartir de la configuration la plus récente : une autre instance
+    // a pu créer ou modifier des éléments entre-temps.
+    await this.ensureLoaded(true);
     const site: Site = {
       id: `site-${Date.now().toString(36)}`,
       name: input.name,
@@ -438,6 +502,7 @@ class IoTStore {
   }
 
   async updateSite(id: string, patch: Partial<SiteInput>): Promise<Site | null> {
+    await this.ensureLoaded(true);
     const index = this.sites.findIndex((s) => s.id === id);
     if (index === -1) return null;
     this.sites[index] = { ...this.sites[index], ...patch };
@@ -447,6 +512,7 @@ class IoTStore {
 
   /** Supprime un site et toutes ses antennes. */
   async deleteSite(id: string): Promise<boolean> {
+    await this.ensureLoaded(true);
     const before = this.sites.length;
     this.sites = this.sites.filter((s) => s.id !== id);
     if (this.sites.length === before) return false;
@@ -462,6 +528,7 @@ class IoTStore {
   /* ---------------- Gestion des antennes ---------------- */
 
   async addAntenna(input: AntennaInput): Promise<Antenna | null> {
+    await this.ensureLoaded(true);
     if (!this.sites.some((s) => s.id === input.siteId)) return null;
 
     const antenna: Antenna = {
@@ -488,6 +555,7 @@ class IoTStore {
   }
 
   async updateAntenna(id: string, patch: Partial<AntennaInput>): Promise<Antenna | null> {
+    await this.ensureLoaded(true);
     const index = this.antennas.findIndex((a) => a.id === id);
     if (index === -1) return null;
     if (patch.siteId && !this.sites.some((s) => s.id === patch.siteId)) return null;
@@ -499,6 +567,7 @@ class IoTStore {
   }
 
   async deleteAntenna(id: string): Promise<boolean> {
+    await this.ensureLoaded(true);
     const before = this.antennas.length;
     this.antennas = this.antennas.filter((a) => a.id !== id);
     if (this.antennas.length === before) return false;
