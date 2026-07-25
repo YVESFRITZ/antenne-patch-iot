@@ -65,4 +65,9 @@ export interface AntennaPayload {
   battery?: number;
   connectedDevices?: number;
   status?: AntennaStatus;
+  /** Position GPS du module (module NEO-6M / u-blox connecté à l'Arduino). */
+  lat?: number;
+  lng?: number;
+  /** Nombre de satellites captés, si le module GPS le fournit. */
+  satellites?: number;
 }

@@ -28,6 +28,10 @@ yarn-error.log*
 .env*.local
 .env
 
+# secrets locaux (cle API des modules Arduino)
+CLE_API_ARDUINO.md
+*.local.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

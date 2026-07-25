@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { store } from "@/lib/store";
+import { authorizeDevice } from "@/lib/apiAuth";
 import type { AntennaPayload } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
@@ -11,6 +12,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Les modules doivent présenter la clé API (en-tête x-api-key).
+  const auth = authorizeDevice(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
+  }
+
   try {
     const payload: AntennaPayload = await request.json();
 

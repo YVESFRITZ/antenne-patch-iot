@@ -367,8 +367,21 @@ class IoTStore {
     if (index === -1) return null;
 
     const current = this.antennas[index];
+    // Position GPS du module : appliquée uniquement si les coordonnées sont
+    // valides, pour ne pas déplacer l'antenne sur un point aberrant (0,0).
+    const hasFix =
+      typeof payload.lat === "number" &&
+      typeof payload.lng === "number" &&
+      Number.isFinite(payload.lat) &&
+      Number.isFinite(payload.lng) &&
+      Math.abs(payload.lat) <= 90 &&
+      Math.abs(payload.lng) <= 180 &&
+      !(payload.lat === 0 && payload.lng === 0);
+
     const updated: Antenna = {
       ...current,
+      lat: hasFix ? (payload.lat as number) : current.lat,
+      lng: hasFix ? (payload.lng as number) : current.lng,
       signalStrength: payload.signalStrength ?? current.signalStrength,
       temperature: payload.temperature ?? current.temperature,
       humidity: payload.humidity ?? current.humidity,

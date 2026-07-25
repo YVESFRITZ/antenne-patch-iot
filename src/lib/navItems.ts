@@ -1,6 +1,7 @@
 import {
   Antenna,
   Bell,
+  Cable,
   LayoutDashboard,
   Map,
   Ruler,
@@ -22,6 +23,7 @@ export const navItems: NavItem[] = [
   { id: "map", label: "Carte des sites", short: "Carte", icon: Map },
   { id: "antennas", label: "Antennes", short: "Antennes", icon: Antenna },
   { id: "link", label: "Liaison / Distance", short: "Liaison", icon: Ruler },
+  { id: "device", label: "Équipement USB", short: "USB", icon: Cable },
   { id: "alerts", label: "Alertes", short: "Alertes", icon: Bell },
   { id: "settings", label: "Paramètres", short: "Réglages", icon: Settings },
 ];

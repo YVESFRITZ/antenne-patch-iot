@@ -10,6 +10,7 @@ import AntennaPanel from "./AntennaPanel";
 import AlertsList from "./AlertsList";
 import AntennaList from "./AntennaList";
 import LinkCalculator from "./LinkCalculator";
+import DevicePanel from "./DevicePanel";
 import { Radio, RefreshCw, Search } from "lucide-react";
 
 const MapView = dynamic(() => import("./MapView"), {
@@ -114,6 +115,7 @@ export default function Dashboard() {
               {activeTab === "map" && "Carte des sites IoT"}
               {activeTab === "antennas" && "Gestion des antennes"}
               {activeTab === "link" && "Liaison — distance émetteur / récepteur"}
+              {activeTab === "device" && "Équipement connecté (USB)"}
               {activeTab === "alerts" && "Centre d'alertes"}
               {activeTab === "settings" && "Paramètres"}
             </h2>
@@ -233,6 +235,12 @@ export default function Dashboard() {
             </div>
           )}
 
+          {activeTab === "device" && (
+            <div className="mt-4">
+              <DevicePanel antennas={antennas} />
+            </div>
+          )}
+
           {activeTab === "alerts" && (
             <div className="mt-4 max-w-3xl">
               <AlertsList alerts={alerts} onAcknowledge={handleAcknowledge} />
@@ -253,20 +261,48 @@ export default function Dashboard() {
               </div>
               <div className="glass rounded-xl p-6">
                 <h3 className="mb-2 text-sm font-semibold text-white">
-                  Arduino — Connexion antenne
+                  Arduino — Connexion directe à l&apos;application
                 </h3>
                 <p className="mb-4 text-sm text-slate-400">
                   Firmware dans <span className="font-mono text-accent">firmware/arduino/</span>.
-                  Éditez <span className="font-mono">config.h</span> avec votre WiFi et l&apos;IP de ce PC.
+                  Éditez <span className="font-mono">config.h</span> : votre WiFi et la clé API
+                  suffisent, le module se connecte alors directement à cette application.
                 </p>
                 <pre className="overflow-x-auto rounded-lg bg-surface-overlay p-4 font-mono text-xs text-accent">
 {`#define WIFI_SSID     "MonWiFi"
 #define WIFI_PASSWORD "motdepasse"
-#define SERVER_HOST   "192.168.1.111"
+
+#define USE_TLS
+#define SERVER_HOST   "antenne-patch-iot.netlify.app"
+#define SERVER_PORT   443
+
+#define API_KEY       "votre_cle_api"
 #define ANTENNA_ID    "ant-1"`}
                 </pre>
                 <p className="mt-3 text-xs text-slate-500">
-                  ESP32 (WiFi) ou Arduino UNO + shield Ethernet. Voir firmware/arduino/README.md
+                  La clé API est stockée côté serveur (variable{" "}
+                  <span className="font-mono">ANTENNE_API_KEY</span>) et n&apos;est jamais
+                  affichée ici. ESP32 pour l&apos;envoi WiFi/HTTPS, UNO + shield Ethernet
+                  pour un serveur local. Voir firmware/arduino/README.md
+                </p>
+              </div>
+              <div className="glass rounded-xl p-6">
+                <h3 className="mb-2 text-sm font-semibold text-white">
+                  Module GPS — Position des antennes
+                </h3>
+                <p className="mb-4 text-sm text-slate-400">
+                  Branchez un module GPS (NEO-6M) sur l&apos;Arduino : sa position réelle
+                  remplace automatiquement les coordonnées de l&apos;antenne sur la carte.
+                </p>
+                <pre className="overflow-x-auto rounded-lg bg-surface-overlay p-4 font-mono text-xs text-accent">
+{`#define USE_GPS
+#define GPS_RX_PIN 16   // ESP32 <- TX du GPS
+#define GPS_TX_PIN 17   // ESP32 -> RX du GPS
+#define GPS_BAUD   9600`}
+                </pre>
+                <p className="mt-3 text-xs text-slate-500">
+                  Bibliothèque requise : TinyGPSPlus. Première acquisition en extérieur :
+                  1 à 5 minutes.
                 </p>
               </div>
               <div className="glass rounded-xl p-6">
@@ -276,6 +312,7 @@ export default function Dashboard() {
                 <pre className="overflow-x-auto rounded-lg bg-surface-overlay p-4 font-mono text-xs text-accent">
 {`POST /api/telemetry
 Content-Type: application/json
+x-api-key: votre_cle_api
 
 {
   "antennaId": "ant-1",
@@ -283,7 +320,10 @@ Content-Type: application/json
   "temperature": 24.5,
   "humidity": 45,
   "battery": 92,
-  "connectedDevices": 34
+  "connectedDevices": 34,
+  "lat": 5.35995,
+  "lng": -4.00826,
+  "satellites": 9
 }`}
                 </pre>
               </div>

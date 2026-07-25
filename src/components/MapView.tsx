@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Crosshair, Layers, MapPin, Navigation } from "lucide-react";
+import { haversineDistance } from "@/lib/utils";
 import type { Antenna, Site } from "@/lib/types";
 import { statusColor, statusLabel } from "@/lib/utils";
 import { DEFAULT_CENTER } from "@/lib/mapStyles";
@@ -32,10 +33,26 @@ export default function MapView({
   linkRxId = null,
 }: MapViewProps) {
   const apiKey = GOOGLE_MAPS_CONFIG.apiKey;
-  const { position: userPosition, loading: geoLoading, error: geoError, refresh } = useGeolocation();
+  const {
+    position: userPosition,
+    loading: geoLoading,
+    error: geoError,
+    tracking,
+    refresh,
+  } = useGeolocation();
   const [mode, setMode] = useState<"google" | "osm" | "interactive">("osm");
 
   const center = useMemo(() => userPosition ?? DEFAULT_CENTER, [userPosition]);
+
+  // Les cartes en iframe (OSM / Embed) rechargent la page à chaque changement
+  // de coordonnées : on ne les recentre qu'au-delà d'un vrai déplacement,
+  // sinon le suivi temps réel ferait clignoter la carte en permanence.
+  const embedCenterRef = useRef(center);
+  const lastEmbed = embedCenterRef.current;
+  if (haversineDistance(lastEmbed.lat, lastEmbed.lng, center.lat, center.lng) > 150) {
+    embedCenterRef.current = center;
+  }
+  const embedCenter = embedCenterRef.current;
 
   // Le tracé de liaison n'est visible que sur la carte Google interactive :
   // on bascule automatiquement quand une liaison TX→RX est sélectionnée.
@@ -82,9 +99,9 @@ export default function MapView({
           onFallback={() => setMode("osm")}
         />
       ) : mode === "osm" ? (
-        <OsmEmbed lat={center.lat} lng={center.lng} zoom={MAP_DEFAULTS.zoom} />
+        <OsmEmbed lat={embedCenter.lat} lng={embedCenter.lng} zoom={MAP_DEFAULTS.zoom} />
       ) : (
-        <GoogleMapsEmbed lat={center.lat} lng={center.lng} zoom={MAP_DEFAULTS.zoom} />
+        <GoogleMapsEmbed lat={embedCenter.lat} lng={embedCenter.lng} zoom={MAP_DEFAULTS.zoom} />
       )}
 
       <div className="absolute right-3 top-3 z-20 flex gap-2">
@@ -117,6 +134,9 @@ export default function MapView({
               </span>
               {" "}({userPosition.source === "gps" ? "GPS" : userPosition.source === "ip" ? "IP" : "défaut"}
               {userPosition.accuracy ? ` ±${Math.round(userPosition.accuracy)} m` : ""})
+              {tracking && userPosition.source === "gps" && (
+                <span className="ml-1.5 text-status-online">● suivi temps réel</span>
+              )}
               {" · "}{mapAntennas.length} antennes
             </span>
           ) : (
