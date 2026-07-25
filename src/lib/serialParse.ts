@@ -1,11 +1,68 @@
-import type { AntennaPayload } from "./types";
+import type { AntennaPayload, DetectedNetwork } from "./types";
 
 /** Trame décodée depuis le port USB. */
 export interface ParsedFrame {
-  kind: "json" | "nmea" | "text";
+  kind: "json" | "nmea" | "scan" | "text";
   payload?: Partial<AntennaPayload>;
+  /** Réseaux captés lors d'un balayage radio du module. */
+  networks?: DetectedNetwork[];
   /** Ligne brute, pour le journal. */
   raw: string;
+}
+
+/**
+ * Distance approximative d'un émetteur d'après la puissance reçue.
+ * Modèle log-distance : d = 10^((P₁ₘ − RSSI) / (10·n)), avec une
+ * puissance de référence de −40 dBm à 1 m et un exposant de 2,7
+ * (propagation en intérieur encombré).
+ *
+ * L'ordre de grandeur est utile, la valeur exacte ne l'est pas : murs,
+ * obstacles et interférences la font varier fortement.
+ */
+export function estimateDistanceFromRssi(rssi: number): number {
+  const referenceDbm = -40;
+  const pathLossExponent = 2.7;
+  if (!Number.isFinite(rssi) || rssi >= 0) return 0;
+  return Math.pow(10, (referenceDbm - rssi) / (10 * pathLossExponent));
+}
+
+/** Qualité lisible d'un signal WiFi d'après son RSSI. */
+export function rssiQuality(rssi: number): { label: string; percent: number } {
+  // -30 dBm ≈ excellent, -90 dBm ≈ inexploitable.
+  const percent = Math.round(Math.min(100, Math.max(0, ((rssi + 90) / 60) * 100)));
+  if (rssi >= -50) return { label: "Excellent", percent };
+  if (rssi >= -60) return { label: "Très bon", percent };
+  if (rssi >= -70) return { label: "Bon", percent };
+  if (rssi >= -80) return { label: "Faible", percent };
+  return { label: "Très faible", percent };
+}
+
+/** Analyse une trame de balayage radio émise par le module. */
+export function parseScanFrame(line: string): DetectedNetwork[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("{")) return null;
+  try {
+    const data = JSON.parse(trimmed) as Record<string, unknown>;
+    if (data.type !== "scan" || !Array.isArray(data.networks)) return null;
+
+    const networks: DetectedNetwork[] = [];
+    for (const item of data.networks) {
+      if (typeof item !== "object" || item === null) continue;
+      const n = item as Record<string, unknown>;
+      const rssi = typeof n.rssi === "number" ? n.rssi : Number(n.rssi);
+      if (!Number.isFinite(rssi)) continue;
+      networks.push({
+        ssid: typeof n.ssid === "string" && n.ssid.length > 0 ? n.ssid : "(réseau masqué)",
+        bssid: typeof n.bssid === "string" ? n.bssid : undefined,
+        rssi,
+        channel: typeof n.channel === "number" ? n.channel : undefined,
+        encryption: typeof n.enc === "string" ? n.enc : undefined,
+      });
+    }
+    return networks.length > 0 ? networks.sort((a, b) => b.rssi - a.rssi) : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -99,6 +156,11 @@ export function parseJsonFrame(line: string): Partial<AntennaPayload> | null {
 /** Analyse une ligne quelconque reçue sur le port série. */
 export function parseSerialLine(line: string): ParsedFrame {
   const raw = line.trim();
+
+  // Le balayage radio est testé avant la télémétrie : les deux sont du
+  // JSON, mais seul le premier porte un champ "type": "scan".
+  const networks = parseScanFrame(raw);
+  if (networks) return { kind: "scan", networks, raw };
 
   const json = parseJsonFrame(raw);
   if (json) return { kind: "json", payload: json, raw };

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseSerialLine, type ParsedFrame } from "@/lib/serialParse";
-import type { AntennaPayload } from "@/lib/types";
+import type { AntennaPayload, DetectedNetwork } from "@/lib/types";
 
 export interface SerialLogEntry {
   id: number;
@@ -33,6 +33,9 @@ export function useSerialDevice(options: UseSerialOptions = {}) {
   const [lastPayload, setLastPayload] = useState<Partial<AntennaPayload> | null>(null);
   const [framesReceived, setFramesReceived] = useState(0);
   const [framesSent, setFramesSent] = useState(0);
+  /** Réseaux réellement captés lors du dernier balayage du module. */
+  const [networks, setNetworks] = useState<DetectedNetwork[]>([]);
+  const [lastScanAt, setLastScanAt] = useState<number | null>(null);
 
   const portRef = useRef<SerialPort | null>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
@@ -113,6 +116,11 @@ export function useSerialDevice(options: UseSerialOptions = {}) {
               const frame = parseSerialLine(line);
               setFramesReceived((n) => n + 1);
               pushLog(frame.kind, frame.raw);
+
+              if (frame.networks) {
+                setNetworks(frame.networks);
+                setLastScanAt(Date.now());
+              }
 
               if (frame.payload) {
                 setLastPayload((prev) => ({ ...prev, ...frame.payload }));
@@ -204,6 +212,8 @@ export function useSerialDevice(options: UseSerialOptions = {}) {
     error,
     log,
     lastPayload,
+    networks,
+    lastScanAt,
     framesReceived,
     framesSent,
     connect,

@@ -47,6 +47,22 @@ export interface Alert {
   acknowledged: boolean;
 }
 
+/**
+ * Réseau réellement détecté par le module lors d'un balayage radio.
+ * Contrairement aux antennes cartographiées, ce sont des émetteurs
+ * effectivement captés, avec leur puissance mesurée.
+ */
+export interface DetectedNetwork {
+  ssid: string;
+  /** Adresse MAC du point d'accès : identifie l'antenne physique. */
+  bssid?: string;
+  /** Puissance reçue en dBm (ex. -45 = très fort, -90 = très faible). */
+  rssi: number;
+  channel?: number;
+  /** Ouvert, WEP, WPA, WPA2, WPA3… */
+  encryption?: string;
+}
+
 /** Seuils déclenchant les alertes, réglables depuis l'interface. */
 export interface Thresholds {
   /** Batterie basse (%) — en dessous, alerte. */

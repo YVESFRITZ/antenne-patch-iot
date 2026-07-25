@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Antenna } from "@/lib/types";
 import { useSerialDevice } from "@/hooks/useSerialDevice";
+import { estimateDistanceFromRssi, rssiQuality } from "@/lib/serialParse";
 import {
   AlertTriangle,
   Cable,
@@ -13,6 +14,7 @@ import {
   MapPin,
   Plug,
   PlugZap,
+  RadioTower,
   Satellite,
   Trash2,
 } from "lucide-react";
@@ -45,6 +47,8 @@ export default function DevicePanel({ antennas }: DevicePanelProps) {
     error,
     log,
     lastPayload,
+    networks,
+    lastScanAt,
     framesReceived,
     framesSent,
     connect,
@@ -277,6 +281,74 @@ export default function DevicePanel({ antennas }: DevicePanelProps) {
               vue dégagée du ciel (première acquisition : 1 à 5 minutes).
             </p>
           )}
+        </div>
+      )}
+
+      {/* Antennes réellement captées par le module */}
+      {networks.length > 0 && (
+        <div className="glass rounded-xl p-5">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <RadioTower className="h-5 w-5 text-purple-400" />
+            <h3 className="text-sm font-semibold text-white">
+              Antennes captées par le module
+              <span className="ml-1.5 font-normal text-slate-500">({networks.length})</span>
+            </h3>
+            {lastScanAt && (
+              <span className="ml-auto text-[11px] text-slate-500">
+                balayage à {new Date(lastScanAt).toLocaleTimeString("fr-FR")}
+              </span>
+            )}
+          </div>
+          <p className="mb-3 text-xs text-slate-400">
+            Émetteurs réellement détectés par l&apos;antenne, avec la puissance
+            mesurée sur place — ce ne sont pas des données cartographiques.
+          </p>
+
+          <ul className="space-y-1.5">
+            {networks.map((net) => {
+              const quality = rssiQuality(net.rssi);
+              const distance = estimateDistanceFromRssi(net.rssi);
+              return (
+                <li
+                  key={`${net.bssid ?? net.ssid}-${net.channel ?? 0}`}
+                  className="rounded-lg bg-surface-overlay/40 p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-white">{net.ssid}</p>
+                      <p className="truncate text-[11px] text-slate-500">
+                        {net.bssid && <span className="font-mono">{net.bssid}</span>}
+                        {net.channel ? ` · canal ${net.channel}` : ""}
+                        {net.encryption ? ` · ${net.encryption}` : ""}
+                        {distance > 0 && ` · ~${distance < 1000
+                          ? `${Math.round(distance)} m`
+                          : `${(distance / 1000).toFixed(1)} km`}`}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-mono text-sm font-bold text-white">{net.rssi} dBm</p>
+                      <p className="text-[11px] text-slate-400">{quality.label}</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-surface-overlay">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${quality.percent}%`,
+                        backgroundColor:
+                          net.rssi >= -60 ? "#22c55e" : net.rssi >= -75 ? "#f59e0b" : "#ef4444",
+                      }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <p className="mt-3 text-[11px] text-slate-500">
+            Distance estimée depuis la puissance reçue : ordre de grandeur
+            seulement, les murs et obstacles la faussent fortement.
+          </p>
         </div>
       )}
 

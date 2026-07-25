@@ -121,6 +121,38 @@ Broche 6 ────   RX
 > la position n'est pas valide, aucune coordonnée n'est envoyée (l'antenne
 > garde sa position précédente).
 
+## Balayage radio — antennes réellement captées
+
+L'ESP32 scanne les points d'accès WiFi environnants et remonte **ceux
+qu'il capte vraiment**, avec la puissance mesurée sur place. Ces réseaux
+s'affichent dans l'onglet **Équipement USB** de l'application.
+
+À distinguer des antennes affichées sur la carte : celles-ci viennent
+d'OpenStreetMap (base cartographique), alors que le balayage détecte des
+émetteurs physiquement présents autour du module.
+
+```cpp
+#define USE_WIFI_SCAN
+#define SCAN_INTERVAL_MS  60000   // un balayage par minute
+#define SCAN_MAX_NETWORKS 15      // réseaux transmis, du plus fort au plus faible
+```
+
+Trame émise sur le port USB :
+
+```json
+{"type":"scan","antennaId":"ant-1","networks":[
+  {"ssid":"MonWiFi","bssid":"aa:bb:cc:dd:ee:01","rssi":-45,"channel":6,"enc":"WPA2"}
+]}
+```
+
+`rssi` est la puissance reçue en dBm : −45 est excellent, −70 correct,
+−85 très faible. L'application en déduit une distance approximative
+(ordre de grandeur uniquement : murs et obstacles la faussent).
+
+> Chaque balayage interrompt brièvement la liaison WiFi (~2 s). Gardez un
+> intervalle d'au moins 30 s, ou commentez `USE_WIFI_SCAN` si le module
+> doit émettre en continu.
+
 ## Schéma de câblage (ESP32 + DHT22)
 
 ```

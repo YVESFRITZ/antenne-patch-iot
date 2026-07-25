@@ -33,6 +33,7 @@ DHT dht(DHT_PIN, DHT22);
 #endif
 
 unsigned long lastSend = 0;
+unsigned long lastScan = 0;
 int connectedDevices = 0;
 
 void setup() {
@@ -127,6 +128,67 @@ void feedGps() {
 }
 #endif
 
+#ifdef USE_WIFI_SCAN
+/** Nom lisible du chiffrement d'un reseau. */
+const char *encryptionName(wifi_auth_mode_t mode) {
+  switch (mode) {
+    case WIFI_AUTH_OPEN:            return "Ouvert";
+    case WIFI_AUTH_WEP:             return "WEP";
+    case WIFI_AUTH_WPA_PSK:         return "WPA";
+    case WIFI_AUTH_WPA2_PSK:        return "WPA2";
+    case WIFI_AUTH_WPA_WPA2_PSK:    return "WPA/WPA2";
+    case WIFI_AUTH_WPA2_ENTERPRISE: return "WPA2-Entreprise";
+#ifdef WIFI_AUTH_WPA3_PSK
+    case WIFI_AUTH_WPA3_PSK:        return "WPA3";
+    case WIFI_AUTH_WPA2_WPA3_PSK:   return "WPA2/WPA3";
+#endif
+    default:                        return "Inconnu";
+  }
+}
+
+/**
+ * Balaye les antennes WiFi environnantes et emet la liste sur le port USB.
+ * Ce sont des emetteurs reellement captes par le module, avec la
+ * puissance mesuree sur place (RSSI en dBm).
+ */
+void scanNetworks() {
+  Serial.println("Balayage radio en cours...");
+
+  // true = scan actif, false = pas de scan asynchrone, 300 ms par canal
+  int found = WiFi.scanNetworks(false, true, false, 300);
+  if (found <= 0) {
+    Serial.println("Aucun reseau detecte");
+    WiFi.scanDelete();
+    return;
+  }
+
+  int limit = found < SCAN_MAX_NETWORKS ? found : SCAN_MAX_NETWORKS;
+
+  JsonDocument doc;
+  doc["type"]      = "scan";
+  doc["antennaId"] = ANTENNA_ID;
+  JsonArray networks = doc["networks"].to<JsonArray>();
+
+  for (int i = 0; i < limit; i++) {
+    JsonObject net = networks.add<JsonObject>();
+    net["ssid"]    = WiFi.SSID(i);
+    net["bssid"]   = WiFi.BSSIDstr(i);
+    net["rssi"]    = WiFi.RSSI(i);
+    net["channel"] = WiFi.channel(i);
+    net["enc"]     = encryptionName(WiFi.encryptionType(i));
+  }
+
+  String payload;
+  serializeJson(doc, payload);
+  Serial.println(payload);   // lu par l'onglet "Equipement USB"
+
+  Serial.print("Reseaux captes : ");
+  Serial.println(found);
+
+  WiFi.scanDelete();   // libere la memoire du resultat
+}
+#endif
+
 /* ---------------------------------------------------------
    Construction et envoi de la mesure
    --------------------------------------------------------- */
@@ -216,6 +278,13 @@ void loop() {
 
     sendTelemetry(payload);
   }
+
+#ifdef USE_WIFI_SCAN
+  if (millis() - lastScan >= SCAN_INTERVAL_MS) {
+    lastScan = millis();
+    scanNetworks();
+  }
+#endif
 
   delay(10);
 }

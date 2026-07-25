@@ -61,7 +61,22 @@
 #define BATTERY_PIN A0
 
 /* =========================================================
-   7. Sortie USB
+   7. Balayage radio (antennes reellement captees)
+
+   L'ESP32 scanne les points d'acces WiFi environnants et remonte
+   ceux qu'il capte vraiment, avec leur puissance mesuree (RSSI).
+   Ces reseaux apparaissent dans l'onglet "Equipement USB".
+
+   Commentez USE_WIFI_SCAN pour desactiver.
+   Attention : chaque balayage interrompt brievement la liaison WiFi
+   (environ 2 secondes), d'ou un intervalle plus long que l'envoi.
+   ========================================================= */
+#define USE_WIFI_SCAN
+#define SCAN_INTERVAL_MS 60000
+#define SCAN_MAX_NETWORKS 15
+
+/* =========================================================
+   8. Sortie USB
 
    Emet aussi la mesure en JSON sur le port USB, pour l'onglet
    "Equipement USB" de l'application (Chrome / Edge).
