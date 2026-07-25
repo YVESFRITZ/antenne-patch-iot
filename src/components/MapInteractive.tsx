@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { APIProvider, Map, Marker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
 import type { Antenna, Site } from "@/lib/types";
+import type { NearbyAntenna } from "@/lib/nearbyAntennas";
 import {
   coverageRadiusMeters,
   formatDistance,
@@ -24,6 +25,8 @@ interface MapInteractiveProps {
   linkTxId?: string | null;
   linkRxId?: string | null;
   showCoverage?: boolean;
+  /** Antennes réelles des opérateurs (OpenStreetMap). */
+  realAntennas?: NearbyAntenna[];
   onFallback: () => void;
 }
 
@@ -100,6 +103,7 @@ export default function MapInteractive({
   linkTxId = null,
   linkRxId = null,
   showCoverage = false,
+  realAntennas = [],
   onFallback,
 }: MapInteractiveProps) {
   const [infoId, setInfoId] = useState<string | null>(null);
@@ -173,6 +177,57 @@ export default function MapInteractive({
         )}
 
         {showCoverage && <CoverageLayer antennas={antennas} />}
+
+        {/* Antennes reelles des operateurs : marqueurs violets, non supervisees */}
+        {realAntennas.map((real) => (
+          <Marker
+            key={real.id}
+            position={{ lat: real.lat, lng: real.lng }}
+            title={real.name ?? real.operator ?? "Antenne opérateur"}
+            icon={{
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 6,
+              fillColor: "#a855f7",
+              fillOpacity: 0.9,
+              strokeColor: "#ffffff",
+              strokeWeight: 1.5,
+            }}
+            onClick={() => setInfoId(`real-${real.id}`)}
+          />
+        ))}
+
+        {infoId?.startsWith("real-") && (() => {
+          const real = realAntennas.find((r) => `real-${r.id}` === infoId);
+          if (!real) return null;
+          return (
+            <InfoWindow
+              position={{ lat: real.lat, lng: real.lng }}
+              onCloseClick={() => setInfoId(null)}
+            >
+              <div style={{ color: "#1a2332", fontSize: 13, maxWidth: 220 }}>
+                <strong>{real.name ?? real.operator ?? "Antenne opérateur"}</strong>
+                <p style={{ margin: "4px 0" }}>
+                  {real.kind === "communications_tower"
+                    ? "Tour de télécommunication"
+                    : real.kind === "mast"
+                      ? "Pylône / mât"
+                      : "Pylône"}
+                  {real.towerType ? ` (${real.towerType})` : ""}
+                </p>
+                {real.operator && <p style={{ margin: "2px 0" }}>Opérateur : {real.operator}</p>}
+                <p style={{ margin: "2px 0" }}>
+                  Distance :{" "}
+                  {real.distanceMeters < 1000
+                    ? `${real.distanceMeters} m`
+                    : `${(real.distanceMeters / 1000).toFixed(2)} km`}
+                </p>
+                <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+                  Source : OpenStreetMap — antenne non supervisée
+                </p>
+              </div>
+            </InfoWindow>
+          );
+        })()}
 
         {hasLink && <LinkLine tx={linkTx!} rx={linkRx!} />}
 

@@ -1,14 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Crosshair, Filter, Layers, MapPin, Navigation, Radar, Search, X } from "lucide-react";
+import {
+  Crosshair,
+  Filter,
+  Layers,
+  MapPin,
+  Navigation,
+  Radar,
+  RadioTower,
+  Search,
+  X,
+} from "lucide-react";
 import { haversineDistance } from "@/lib/utils";
 import type { Antenna, AntennaStatus, Site } from "@/lib/types";
 import { statusColor, statusLabel } from "@/lib/utils";
 import { DEFAULT_CENTER } from "@/lib/mapStyles";
 import { GOOGLE_MAPS_CONFIG, MAP_DEFAULTS } from "@/lib/googleMapsConfig";
-import { shiftSitesToUser } from "@/lib/geoShift";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { useNearbyAntennas } from "@/hooks/useNearbyAntennas";
 import GoogleMapsEmbed from "./GoogleMapsEmbed";
 import MapInteractive from "./MapInteractive";
 import OsmEmbed from "./OsmEmbed";
@@ -40,7 +50,10 @@ export default function MapView({
     tracking,
     refresh,
   } = useGeolocation();
-  const [mode, setMode] = useState<"google" | "osm" | "interactive">("osm");
+  // Carte Google interactive par défaut : c'est le seul mode capable
+  // d'afficher les marqueurs d'antennes. Les modes en iframe (OSM, Embed)
+  // ne montrent que la position. Repli automatique si Google ne charge pas.
+  const [mode, setMode] = useState<"google" | "osm" | "interactive">("google");
 
   const center = useMemo(() => userPosition ?? DEFAULT_CENTER, [userPosition]);
 
@@ -60,10 +73,11 @@ export default function MapView({
     if (linkTxId && linkRxId) setMode("google");
   }, [linkTxId, linkRxId]);
 
-  const { sites: mapSites, antennas: allMapAntennas } = useMemo(() => {
-    if (!userPosition) return { sites, antennas };
-    return shiftSitesToUser(sites, antennas, userPosition.lat, userPosition.lng);
-  }, [sites, antennas, userPosition]);
+  // Les antennes sont affichées à leurs coordonnées réelles. Aucun
+  // repositionnement artificiel : une antenne enregistrée à Lyon reste à
+  // Lyon, même si vous consultez la carte depuis Abidjan.
+  const mapSites = sites;
+  const allMapAntennas = antennas;
 
   // Filtres d'affichage de la carte.
   const [statusFilter, setStatusFilter] = useState<"all" | AntennaStatus>("all");
@@ -71,6 +85,15 @@ export default function MapView({
   const [search, setSearch] = useState("");
   const [showCoverage, setShowCoverage] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  /** Antennes réelles des opérateurs (OpenStreetMap), activées par défaut. */
+  const [showReal, setShowReal] = useState(true);
+  const [realRadius, setRealRadius] = useState(10000);
+
+  const {
+    antennas: realAntennas,
+    loading: realLoading,
+    error: realError,
+  } = useNearbyAntennas(userPosition, realRadius, showReal);
 
   const mapAntennas = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -118,6 +141,7 @@ export default function MapView({
           linkTxId={linkTxId}
           linkRxId={linkRxId}
           showCoverage={showCoverage}
+          realAntennas={showReal ? realAntennas : []}
           onFallback={() => setMode("osm")}
         />
       ) : mode === "osm" ? (
@@ -138,6 +162,18 @@ export default function MapView({
         >
           <Filter className="h-4 w-4" />
           {filtersActive ? `${mapAntennas.length}/${allMapAntennas.length}` : "Filtres"}
+        </button>
+        <button
+          onClick={() => setShowReal((v) => !v)}
+          title="Antennes réelles des opérateurs (OpenStreetMap)"
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium shadow-lg ${
+            showReal
+              ? "bg-purple-500 text-white"
+              : "bg-surface-overlay/90 text-white hover:bg-surface-overlay"
+          }`}
+        >
+          <RadioTower className="h-4 w-4" />
+          {showReal ? (realLoading ? "…" : realAntennas.length) : "Réelles"}
         </button>
         <button
           onClick={() => setShowCoverage((v) => !v)}
@@ -255,13 +291,47 @@ export default function MapView({
               {tracking && userPosition.source === "gps" && (
                 <span className="ml-1.5 text-status-online">● suivi temps réel</span>
               )}
-              {" · "}{mapAntennas.length} antennes
+              {" · "}
+              <span className="text-accent">{mapAntennas.length}</span> mes antennes
+              {showReal && (
+                <>
+                  {" · "}
+                  <span className="text-purple-400">
+                    {realLoading ? "recherche…" : `${realAntennas.length} antennes réelles`}
+                  </span>
+                </>
+              )}
             </span>
           ) : (
             <span>Position en cours...</span>
           )}
           {geoError && <span className="ml-2 text-status-warning">{geoError}</span>}
+          {realError && <span className="ml-2 text-status-warning">{realError}</span>}
         </div>
+
+        {showReal && realAntennas.length > 0 && (
+          <div className="glass mt-2 rounded-lg px-3 py-2 text-[11px] text-slate-400">
+            <span className="text-purple-400">◆</span> Antennes des opérateurs
+            (OpenStreetMap) — la plus proche à{" "}
+            <span className="font-mono text-white">
+              {realAntennas[0].distanceMeters < 1000
+                ? `${realAntennas[0].distanceMeters} m`
+                : `${(realAntennas[0].distanceMeters / 1000).toFixed(1)} km`}
+            </span>
+            {realAntennas[0].operator ? ` · ${realAntennas[0].operator}` : ""}
+            {" · rayon "}
+            <select
+              value={realRadius}
+              onChange={(e) => setRealRadius(Number(e.target.value))}
+              className="rounded bg-surface-overlay px-1 py-0.5 text-[11px] text-white outline-none"
+            >
+              <option value={2000}>2 km</option>
+              <option value={5000}>5 km</option>
+              <option value={10000}>10 km</option>
+              <option value={25000}>25 km</option>
+            </select>
+          </div>
+        )}
         {mapAntennas.length > 0 && (
           <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
             {mapAntennas.slice(0, 6).map((a) => (

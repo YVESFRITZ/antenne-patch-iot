@@ -48,6 +48,9 @@ interface AntennaDraft {
 
 const emptySite: SiteDraft = { name: "", address: "", description: "", lat: "", lng: "" };
 
+/** Sites d'exemple livrés avec l'application (données fictives, Lyon). */
+const DEMO_SITE_IDS = ["site-1", "site-2", "site-3", "site-4", "site-5"];
+
 export default function ManagementPanel({ sites, antennas, onChanged }: ManagementPanelProps) {
   const { position } = useGeolocation();
 
@@ -56,6 +59,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmDemo, setConfirmDemo] = useState(false);
 
   /** Appelle l'API et rafraîchit, en remontant les erreurs à l'utilisateur. */
   async function call(url: string, options: RequestInit): Promise<boolean> {
@@ -149,8 +153,69 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
     if (ok) setConfirmDelete(null);
   }
 
+  /** Supprime les 5 sites de démonstration livrés avec l'application. */
+  async function removeDemoData() {
+    setBusy(true);
+    setError(null);
+    let removed = 0;
+    for (const site of sites.filter((s) => DEMO_SITE_IDS.includes(s.id))) {
+      const res = await fetch(`/api/sites?id=${encodeURIComponent(site.id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) removed++;
+    }
+    setBusy(false);
+    setConfirmDemo(false);
+    if (removed === 0) setError("Aucune donnée de démonstration à supprimer");
+    onChanged();
+  }
+
+  const demoCount = sites.filter((s) => DEMO_SITE_IDS.includes(s.id)).length;
+
   return (
     <div className="max-w-4xl space-y-4">
+      {demoCount > 0 && (
+        <div className="glass rounded-xl border-l-4 border-status-warning p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-white">
+                {demoCount} site(s) de démonstration
+              </p>
+              <p className="text-xs text-slate-400">
+                Ces sites (Lyon) sont des exemples livrés avec l&apos;application : ce
+                ne sont pas de vraies antennes. Supprimez-les pour ne garder que
+                votre matériel.
+              </p>
+            </div>
+            {confirmDemo ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={removeDemoData}
+                  disabled={busy}
+                  className="rounded-lg bg-status-offline px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
+                >
+                  {busy ? "Suppression…" : "Confirmer"}
+                </button>
+                <button
+                  onClick={() => setConfirmDemo(false)}
+                  className="rounded-lg px-3 py-2 text-xs text-slate-400 hover:text-white"
+                >
+                  Annuler
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDemo(true)}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-status-warning/15 px-3 py-2 text-xs font-medium text-status-warning hover:bg-status-warning/25"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Supprimer les exemples
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="flex items-center justify-between rounded-xl bg-status-offline/10 px-4 py-3 text-sm text-status-offline">
           <span>{error}</span>
