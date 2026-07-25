@@ -1,5 +1,9 @@
 [build]
   command = "npm run build"
+  # Le plugin Next.js v5 attend le dossier de sortie de Next.
+  # Sans cette ligne, "publish" vaut la racine du depot et le build
+  # echoue : "publish directory cannot be the same as the base directory".
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -8,5 +12,4 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Redirections Next.js gérées par le plugin
-# Ne pas définir "publish" — le plugin Next.js gère le dossier de sortie
+# Redirections Next.js gerees automatiquement par le plugin
