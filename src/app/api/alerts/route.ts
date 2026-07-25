@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { store } from "@/lib/store";
 
 export async function POST(request: NextRequest) {
+  await store.ensureLoaded();
   try {
     const { alertId } = await request.json();
     if (!alertId) {

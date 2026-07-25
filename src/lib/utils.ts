@@ -122,6 +122,25 @@ export function freeSpacePathLoss(distanceMeters: number, freqMHz: number): numb
   return 20 * Math.log10(dKm) + 20 * Math.log10(freqMHz) + 32.44;
 }
 
+/** Portée nominale (m) en zone dégagée, selon la technologie. */
+const NOMINAL_RANGE_M: Record<string, number> = {
+  LoRa: 5000,
+  "4G": 2000,
+  WiFi: 150,
+  Satellite: 20000,
+};
+
+/**
+ * Rayon de couverture estimé d'une antenne, pour l'affichage sur la carte.
+ * La portée nominale de la technologie est pondérée par la qualité du
+ * signal mesurée (une antenne à 50 % couvre environ la moitié du rayon).
+ */
+export function coverageRadiusMeters(type: string, signalStrength: number): number {
+  const nominal = NOMINAL_RANGE_M[type] ?? 1000;
+  const ratio = Math.min(1, Math.max(0, signalStrength / 100));
+  return Math.round(nominal * ratio);
+}
+
 /** Portée théorique de la ligne d'horizon radio (km) selon la hauteur (m). */
 export function radioHorizonKm(heightMeters: number): number {
   return 4.12 * Math.sqrt(Math.max(0, heightMeters));

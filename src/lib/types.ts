@@ -47,6 +47,44 @@ export interface Alert {
   acknowledged: boolean;
 }
 
+/** Seuils déclenchant les alertes, réglables depuis l'interface. */
+export interface Thresholds {
+  /** Batterie basse (%) — en dessous, alerte. */
+  lowBattery: number;
+  /** Température élevée (°C) — au-dessus, alerte. */
+  highTemperature: number;
+  /** Signal faible (%) — en dessous, alerte. */
+  weakSignal: number;
+  /** Délai sans nouvelle (secondes) avant de déclarer l'antenne hors ligne. */
+  offlineAfterSeconds: number;
+}
+
+export const DEFAULT_THRESHOLDS: Thresholds = {
+  lowBattery: 20,
+  highTemperature: 30,
+  weakSignal: 40,
+  offlineAfterSeconds: 300,
+};
+
+/** Champs modifiables d'un site depuis l'interface. */
+export interface SiteInput {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  description: string;
+}
+
+/** Champs modifiables d'une antenne depuis l'interface. */
+export interface AntennaInput {
+  siteId: string;
+  name: string;
+  type: Antenna["type"];
+  lat: number;
+  lng: number;
+  firmware?: string;
+}
+
 export interface DashboardStats {
   totalSites: number;
   totalAntennas: number;

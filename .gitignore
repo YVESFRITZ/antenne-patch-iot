@@ -32,6 +32,9 @@ yarn-error.log*
 CLE_API_ARDUINO.md
 *.local.md
 
+# donnees persistees en developpement local
+/.data/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

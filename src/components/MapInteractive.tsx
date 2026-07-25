@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { APIProvider, Map, Marker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
 import type { Antenna, Site } from "@/lib/types";
-import { formatDistance, haversineDistance, statusColor, statusLabel } from "@/lib/utils";
+import {
+  coverageRadiusMeters,
+  formatDistance,
+  haversineDistance,
+  statusColor,
+  statusLabel,
+} from "@/lib/utils";
 import { darkMapStyle } from "@/lib/mapStyles";
 import { GOOGLE_MAPS_CONFIG, MAP_DEFAULTS } from "@/lib/googleMapsConfig";
 import type { GeoPosition } from "@/hooks/useGeolocation";
@@ -17,7 +23,41 @@ interface MapInteractiveProps {
   onSelectAntenna: (id: string | null) => void;
   linkTxId?: string | null;
   linkRxId?: string | null;
+  showCoverage?: boolean;
   onFallback: () => void;
+}
+
+/** Cercles de couverture estimée autour de chaque antenne. */
+function CoverageLayer({ antennas }: { antennas: Antenna[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || typeof google === "undefined") return;
+
+    const circles = antennas
+      .map((antenna) => {
+        const radius = coverageRadiusMeters(antenna.type, antenna.signalStrength);
+        if (radius <= 0) return null;
+        const color = statusColor(antenna.status);
+        return new google.maps.Circle({
+          center: { lat: antenna.lat, lng: antenna.lng },
+          radius,
+          strokeColor: color,
+          strokeOpacity: 0.5,
+          strokeWeight: 1,
+          fillColor: color,
+          fillOpacity: 0.08,
+          clickable: false,
+          map,
+          zIndex: 10,
+        });
+      })
+      .filter((c): c is google.maps.Circle => c !== null);
+
+    return () => circles.forEach((c) => c.setMap(null));
+  }, [map, antennas]);
+
+  return null;
 }
 
 /** Trace la liaison émetteur → récepteur (polyligne + flèche animée). */
@@ -59,6 +99,7 @@ export default function MapInteractive({
   onSelectAntenna,
   linkTxId = null,
   linkRxId = null,
+  showCoverage = false,
   onFallback,
 }: MapInteractiveProps) {
   const [infoId, setInfoId] = useState<string | null>(null);
@@ -130,6 +171,8 @@ export default function MapInteractive({
             </div>
           </InfoWindow>
         )}
+
+        {showCoverage && <CoverageLayer antennas={antennas} />}
 
         {hasLink && <LinkLine tx={linkTx!} rx={linkRx!} />}
 

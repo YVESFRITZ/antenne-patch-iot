@@ -4,6 +4,7 @@ import { authorizeDevice } from "@/lib/apiAuth";
 import type { AntennaPayload } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
+  await store.ensureLoaded();
   const antennaId = request.nextUrl.searchParams.get("antennaId");
   if (!antennaId) {
     return NextResponse.json({ error: "antennaId requis" }, { status: 400 });
@@ -17,6 +18,8 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: 401 });
   }
+
+  await store.ensureLoaded();
 
   try {
     const payload: AntennaPayload = await request.json();

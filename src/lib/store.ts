@@ -1,14 +1,25 @@
 import type {
   Alert,
   Antenna,
+  AntennaInput,
   AntennaPayload,
   AntennaStatus,
   DashboardStats,
   Site,
+  SiteInput,
   TelemetryPoint,
+  Thresholds,
 } from "./types";
+import { DEFAULT_THRESHOLDS } from "./types";
+import { loadConfig, saveConfig, type StoredConfig } from "./persistence";
 
 const now = () => new Date().toISOString();
+
+/** Ramène une valeur dans un intervalle, en ignorant les entrées invalides. */
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
 
 const initialSites: Site[] = [
   {
@@ -157,10 +168,11 @@ const initialAntennas: Antenna[] = [
   },
 ];
 
-function computeStatus(antenna: Antenna): AntennaStatus {
+function computeStatus(antenna: Antenna, thresholds: Thresholds): AntennaStatus {
   const lastSeenMs = Date.now() - new Date(antenna.lastSeen).getTime();
-  if (lastSeenMs > 300000) return "offline";
-  if (antenna.battery < 20 || antenna.signalStrength < 40) return "warning";
+  if (lastSeenMs > thresholds.offlineAfterSeconds * 1000) return "offline";
+  if (antenna.battery < thresholds.lowBattery || antenna.signalStrength < thresholds.weakSignal)
+    return "warning";
   if (antenna.signalStrength === 0) return "offline";
   return "online";
 }
@@ -176,8 +188,9 @@ function updateSiteStatuses(sites: Site[], antennas: Antenna[]): Site[] {
   });
 }
 
-function generateAlerts(antennas: Antenna[], sites: Site[]): Alert[] {
+function generateAlerts(antennas: Antenna[], sites: Site[], thresholds: Thresholds): Alert[] {
   const alerts: Alert[] = [];
+  const offlineMinutes = Math.round(thresholds.offlineAfterSeconds / 60);
   for (const antenna of antennas) {
     const site = sites.find((s) => s.id === antenna.siteId);
     if (antenna.status === "offline") {
@@ -188,12 +201,15 @@ function generateAlerts(antennas: Antenna[], sites: Site[]): Alert[] {
         siteName: site?.name ?? "Inconnu",
         type: "offline",
         severity: "critical",
-        message: `${antenna.name} hors ligne depuis plus de 5 minutes`,
+        message:
+          offlineMinutes >= 1
+            ? `${antenna.name} hors ligne depuis plus de ${offlineMinutes} min`
+            : `${antenna.name} hors ligne`,
         timestamp: antenna.lastSeen,
         acknowledged: false,
       });
     }
-    if (antenna.battery < 20 && antenna.status !== "offline") {
+    if (antenna.battery < thresholds.lowBattery && antenna.status !== "offline") {
       alerts.push({
         id: `alert-battery-${antenna.id}`,
         antennaId: antenna.id,
@@ -206,7 +222,7 @@ function generateAlerts(antennas: Antenna[], sites: Site[]): Alert[] {
         acknowledged: false,
       });
     }
-    if (antenna.temperature > 30 && antenna.status !== "offline") {
+    if (antenna.temperature > thresholds.highTemperature && antenna.status !== "offline") {
       alerts.push({
         id: `alert-temp-${antenna.id}`,
         antennaId: antenna.id,
@@ -219,7 +235,7 @@ function generateAlerts(antennas: Antenna[], sites: Site[]): Alert[] {
         acknowledged: false,
       });
     }
-    if (antenna.signalStrength < 40 && antenna.signalStrength > 0) {
+    if (antenna.signalStrength < thresholds.weakSignal && antenna.signalStrength > 0) {
       alerts.push({
         id: `alert-signal-${antenna.id}`,
         antennaId: antenna.id,
@@ -239,14 +255,61 @@ function generateAlerts(antennas: Antenna[], sites: Site[]): Alert[] {
 class IoTStore {
   sites: Site[] = [...initialSites];
   antennas: Antenna[] = [...initialAntennas];
+  thresholds: Thresholds = { ...DEFAULT_THRESHOLDS };
   telemetryHistory: Map<string, TelemetryPoint[]> = new Map();
   acknowledgedAlerts: Set<string> = new Set();
+
+  /** Empêche plusieurs chargements simultanés de la configuration. */
+  private loading: Promise<void> | null = null;
+  private loaded = false;
 
   constructor() {
     for (const antenna of this.antennas) {
       this.telemetryHistory.set(antenna.id, this.generateHistory(antenna));
     }
     this.startSimulation();
+  }
+
+  /**
+   * Charge la configuration sauvegardée (sites, antennes, seuils).
+   * À appeler au début de chaque route API : sur un hébergement
+   * sans serveur, l'instance peut être neuve à chaque requête.
+   */
+  async ensureLoaded(): Promise<void> {
+    if (this.loaded) return;
+    if (!this.loading) {
+      this.loading = (async () => {
+        const saved = await loadConfig();
+        if (saved) {
+          if (saved.sites?.length) this.sites = saved.sites;
+          if (saved.antennas?.length) {
+            this.antennas = saved.antennas;
+            for (const antenna of this.antennas) {
+              if (!this.telemetryHistory.has(antenna.id)) {
+                this.telemetryHistory.set(antenna.id, this.generateHistory(antenna));
+              }
+            }
+          }
+          if (saved.thresholds) {
+            this.thresholds = { ...DEFAULT_THRESHOLDS, ...saved.thresholds };
+          }
+        }
+        this.loaded = true;
+      })();
+    }
+    await this.loading;
+  }
+
+  /** Sauvegarde la configuration courante. */
+  private async persist(): Promise<void> {
+    const config: StoredConfig = {
+      version: 1,
+      sites: this.sites,
+      antennas: this.antennas,
+      thresholds: this.thresholds,
+      updatedAt: now(),
+    };
+    await saveConfig(config);
   }
 
   private generateHistory(antenna: Antenna): TelemetryPoint[] {
@@ -287,7 +350,7 @@ class IoTStore {
           ),
           lastSeen: now(),
         };
-        updated.status = computeStatus(updated);
+        updated.status = computeStatus(updated, this.thresholds);
 
         const history = this.telemetryHistory.get(antenna.id) ?? [];
         history.push({
@@ -311,7 +374,7 @@ class IoTStore {
   }
 
   getAntennas(): Antenna[] {
-    return this.antennas.map((a) => ({ ...a, status: computeStatus(a) }));
+    return this.antennas.map((a) => ({ ...a, status: computeStatus(a, this.thresholds) }));
   }
 
   getAntenna(id: string): Antenna | undefined {
@@ -327,7 +390,7 @@ class IoTStore {
   }
 
   getAlerts(): Alert[] {
-    const alerts = generateAlerts(this.getAntennas(), this.sites);
+    const alerts = generateAlerts(this.getAntennas(), this.sites, this.thresholds);
     return alerts.map((a) => ({
       ...a,
       acknowledged: this.acknowledgedAlerts.has(a.id),
@@ -336,6 +399,114 @@ class IoTStore {
 
   acknowledgeAlert(alertId: string): void {
     this.acknowledgedAlerts.add(alertId);
+  }
+
+  /* ---------------- Seuils d'alerte ---------------- */
+
+  getThresholds(): Thresholds {
+    return this.thresholds;
+  }
+
+  async updateThresholds(patch: Partial<Thresholds>): Promise<Thresholds> {
+    const merged = { ...this.thresholds, ...patch };
+    // Bornes de sécurité : des valeurs absurdes rendraient les alertes inutiles.
+    this.thresholds = {
+      lowBattery: clamp(merged.lowBattery, 0, 100),
+      highTemperature: clamp(merged.highTemperature, -50, 150),
+      weakSignal: clamp(merged.weakSignal, 0, 100),
+      offlineAfterSeconds: clamp(merged.offlineAfterSeconds, 30, 86400),
+    };
+    await this.persist();
+    return this.thresholds;
+  }
+
+  /* ---------------- Gestion des sites ---------------- */
+
+  async addSite(input: SiteInput): Promise<Site> {
+    const site: Site = {
+      id: `site-${Date.now().toString(36)}`,
+      name: input.name,
+      address: input.address,
+      lat: input.lat,
+      lng: input.lng,
+      description: input.description,
+      status: "idle",
+    };
+    this.sites = [...this.sites, site];
+    await this.persist();
+    return site;
+  }
+
+  async updateSite(id: string, patch: Partial<SiteInput>): Promise<Site | null> {
+    const index = this.sites.findIndex((s) => s.id === id);
+    if (index === -1) return null;
+    this.sites[index] = { ...this.sites[index], ...patch };
+    await this.persist();
+    return this.sites[index];
+  }
+
+  /** Supprime un site et toutes ses antennes. */
+  async deleteSite(id: string): Promise<boolean> {
+    const before = this.sites.length;
+    this.sites = this.sites.filter((s) => s.id !== id);
+    if (this.sites.length === before) return false;
+
+    for (const antenna of this.antennas.filter((a) => a.siteId === id)) {
+      this.telemetryHistory.delete(antenna.id);
+    }
+    this.antennas = this.antennas.filter((a) => a.siteId !== id);
+    await this.persist();
+    return true;
+  }
+
+  /* ---------------- Gestion des antennes ---------------- */
+
+  async addAntenna(input: AntennaInput): Promise<Antenna | null> {
+    if (!this.sites.some((s) => s.id === input.siteId)) return null;
+
+    const antenna: Antenna = {
+      id: `ant-${Date.now().toString(36)}`,
+      siteId: input.siteId,
+      name: input.name,
+      type: input.type,
+      lat: input.lat,
+      lng: input.lng,
+      status: "idle",
+      signalStrength: 0,
+      temperature: 0,
+      humidity: 0,
+      battery: 100,
+      lastSeen: now(),
+      firmware: input.firmware ?? "—",
+      connectedDevices: 0,
+    };
+    this.antennas = [...this.antennas, antenna];
+    this.telemetryHistory.set(antenna.id, []);
+    this.sites = updateSiteStatuses(this.sites, this.antennas);
+    await this.persist();
+    return antenna;
+  }
+
+  async updateAntenna(id: string, patch: Partial<AntennaInput>): Promise<Antenna | null> {
+    const index = this.antennas.findIndex((a) => a.id === id);
+    if (index === -1) return null;
+    if (patch.siteId && !this.sites.some((s) => s.id === patch.siteId)) return null;
+
+    this.antennas[index] = { ...this.antennas[index], ...patch };
+    this.sites = updateSiteStatuses(this.sites, this.antennas);
+    await this.persist();
+    return this.antennas[index];
+  }
+
+  async deleteAntenna(id: string): Promise<boolean> {
+    const before = this.antennas.length;
+    this.antennas = this.antennas.filter((a) => a.id !== id);
+    if (this.antennas.length === before) return false;
+
+    this.telemetryHistory.delete(id);
+    this.sites = updateSiteStatuses(this.sites, this.antennas);
+    await this.persist();
+    return true;
   }
 
   getStats(): DashboardStats {
@@ -388,9 +559,9 @@ class IoTStore {
       battery: payload.battery ?? current.battery,
       connectedDevices: payload.connectedDevices ?? current.connectedDevices,
       lastSeen: now(),
-      status: payload.status ?? computeStatus({ ...current, lastSeen: now() }),
+      status: payload.status ?? computeStatus({ ...current, lastSeen: now() }, this.thresholds),
     };
-    updated.status = computeStatus(updated);
+    updated.status = computeStatus(updated, this.thresholds);
     this.antennas[index] = updated;
 
     const history = this.telemetryHistory.get(updated.id) ?? [];

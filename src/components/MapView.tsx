@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Crosshair, Layers, MapPin, Navigation } from "lucide-react";
+import { Crosshair, Filter, Layers, MapPin, Navigation, Radar, Search, X } from "lucide-react";
 import { haversineDistance } from "@/lib/utils";
-import type { Antenna, Site } from "@/lib/types";
+import type { Antenna, AntennaStatus, Site } from "@/lib/types";
 import { statusColor, statusLabel } from "@/lib/utils";
 import { DEFAULT_CENTER } from "@/lib/mapStyles";
 import { GOOGLE_MAPS_CONFIG, MAP_DEFAULTS } from "@/lib/googleMapsConfig";
@@ -60,10 +60,31 @@ export default function MapView({
     if (linkTxId && linkRxId) setMode("google");
   }, [linkTxId, linkRxId]);
 
-  const { sites: mapSites, antennas: mapAntennas } = useMemo(() => {
+  const { sites: mapSites, antennas: allMapAntennas } = useMemo(() => {
     if (!userPosition) return { sites, antennas };
     return shiftSitesToUser(sites, antennas, userPosition.lat, userPosition.lng);
   }, [sites, antennas, userPosition]);
+
+  // Filtres d'affichage de la carte.
+  const [statusFilter, setStatusFilter] = useState<"all" | AntennaStatus>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | Antenna["type"]>("all");
+  const [search, setSearch] = useState("");
+  const [showCoverage, setShowCoverage] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const mapAntennas = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return allMapAntennas.filter((a) => {
+      if (statusFilter !== "all" && a.status !== statusFilter) return false;
+      if (typeFilter !== "all" && a.type !== typeFilter) return false;
+      if (term && !a.name.toLowerCase().includes(term) && !a.id.toLowerCase().includes(term))
+        return false;
+      return true;
+    });
+  }, [allMapAntennas, statusFilter, typeFilter, search]);
+
+  const filtersActive =
+    statusFilter !== "all" || typeFilter !== "all" || search.trim().length > 0;
 
   if (!apiKey) {
     return (
@@ -96,6 +117,7 @@ export default function MapView({
           onSelectAntenna={onSelectAntenna}
           linkTxId={linkTxId}
           linkRxId={linkRxId}
+          showCoverage={showCoverage}
           onFallback={() => setMode("osm")}
         />
       ) : mode === "osm" ? (
@@ -104,7 +126,31 @@ export default function MapView({
         <GoogleMapsEmbed lat={embedCenter.lat} lng={embedCenter.lng} zoom={MAP_DEFAULTS.zoom} />
       )}
 
-      <div className="absolute right-3 top-3 z-20 flex gap-2">
+      <div className="absolute right-3 top-3 z-20 flex flex-wrap justify-end gap-2">
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          aria-label="Filtres"
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium shadow-lg ${
+            filtersActive
+              ? "bg-accent text-black"
+              : "bg-surface-overlay/90 text-white hover:bg-surface-overlay"
+          }`}
+        >
+          <Filter className="h-4 w-4" />
+          {filtersActive ? `${mapAntennas.length}/${allMapAntennas.length}` : "Filtres"}
+        </button>
+        <button
+          onClick={() => setShowCoverage((v) => !v)}
+          aria-label="Zones de couverture"
+          title="Zones de couverture"
+          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium shadow-lg ${
+            showCoverage
+              ? "bg-accent text-black"
+              : "bg-surface-overlay/90 text-white hover:bg-surface-overlay"
+          }`}
+        >
+          <Radar className="h-4 w-4" />
+        </button>
         <button
           onClick={refresh}
           className="flex items-center gap-1.5 rounded-lg bg-blue-500 px-3 py-2 text-xs font-medium text-white shadow-lg hover:bg-blue-600"
@@ -123,6 +169,78 @@ export default function MapView({
           {mode === "google" ? "Google Maps" : mode === "osm" ? "OpenStreetMap" : "Embed"}
         </button>
       </div>
+
+      {showFilters && (
+        <div className="glass absolute left-3 right-3 top-3 z-30 rounded-xl p-3 sm:right-auto sm:w-72">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold text-white">Filtrer les antennes</span>
+            <button
+              onClick={() => setShowFilters(false)}
+              aria-label="Fermer les filtres"
+              className="text-slate-400 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="relative mb-2">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nom ou identifiant…"
+              className="w-full rounded-lg border border-surface-overlay bg-surface-raised py-2 pl-8 pr-2 text-xs text-white placeholder-slate-500 outline-none focus:border-accent/50"
+            />
+          </div>
+
+          <p className="mb-1 text-[11px] text-slate-400">Statut</p>
+          <div className="mb-2 flex flex-wrap gap-1">
+            {(["all", "online", "warning", "offline", "idle"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`rounded-full px-2.5 py-1 text-[11px] ${
+                  statusFilter === s
+                    ? "bg-accent text-black"
+                    : "bg-surface-overlay text-slate-300 hover:bg-surface-overlay/70"
+                }`}
+              >
+                {s === "all" ? "Tous" : statusLabel(s)}
+              </button>
+            ))}
+          </div>
+
+          <p className="mb-1 text-[11px] text-slate-400">Type</p>
+          <div className="flex flex-wrap gap-1">
+            {(["all", "LoRa", "4G", "WiFi", "Satellite"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className={`rounded-full px-2.5 py-1 text-[11px] ${
+                  typeFilter === t
+                    ? "bg-accent text-black"
+                    : "bg-surface-overlay text-slate-300 hover:bg-surface-overlay/70"
+                }`}
+              >
+                {t === "all" ? "Tous" : t}
+              </button>
+            ))}
+          </div>
+
+          {filtersActive && (
+            <button
+              onClick={() => {
+                setStatusFilter("all");
+                setTypeFilter("all");
+                setSearch("");
+              }}
+              className="mt-3 w-full rounded-lg bg-surface-overlay py-1.5 text-[11px] text-slate-300 hover:text-white"
+            >
+              Réinitialiser les filtres
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="absolute bottom-3 left-3 right-3 z-20">
         <div className="glass rounded-lg px-3 py-2 text-xs text-slate-300">

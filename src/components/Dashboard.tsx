@@ -11,6 +11,8 @@ import AlertsList from "./AlertsList";
 import AntennaList from "./AntennaList";
 import LinkCalculator from "./LinkCalculator";
 import DevicePanel from "./DevicePanel";
+import ManagementPanel from "./ManagementPanel";
+import ThresholdSettings from "./ThresholdSettings";
 import { Radio, RefreshCw, Search } from "lucide-react";
 
 const MapView = dynamic(() => import("./MapView"), {
@@ -114,6 +116,7 @@ export default function Dashboard() {
               {activeTab === "dashboard" && "Tableau de bord"}
               {activeTab === "map" && "Carte des sites IoT"}
               {activeTab === "antennas" && "Gestion des antennes"}
+              {activeTab === "manage" && "Gérer sites et antennes"}
               {activeTab === "link" && "Liaison — distance émetteur / récepteur"}
               {activeTab === "device" && "Équipement connecté (USB)"}
               {activeTab === "alerts" && "Centre d'alertes"}
@@ -235,6 +238,12 @@ export default function Dashboard() {
             </div>
           )}
 
+          {activeTab === "manage" && (
+            <div className="mt-4">
+              <ManagementPanel sites={sites} antennas={antennas} onChanged={fetchData} />
+            </div>
+          )}
+
           {activeTab === "device" && (
             <div className="mt-4">
               <DevicePanel antennas={antennas} />
@@ -249,6 +258,7 @@ export default function Dashboard() {
 
           {activeTab === "settings" && (
             <div className="mt-4 max-w-2xl space-y-4">
+              <ThresholdSettings onChanged={fetchData} />
               <div className="glass rounded-xl p-6">
                 <h3 className="mb-4 text-sm font-semibold text-white">
                   Google Maps — Configuré
