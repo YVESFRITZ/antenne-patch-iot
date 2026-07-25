@@ -5,6 +5,8 @@ import type {
   AntennaPayload,
   AntennaStatus,
   DashboardStats,
+  DetectedNetwork,
+  ScanResult,
   Site,
   SiteInput,
   TelemetryPoint,
@@ -289,6 +291,12 @@ class IoTStore {
   /** Dernière vérification du support de sauvegarde. */
   private lastCheckAt = 0;
 
+  /**
+   * Dernier balayage radio de chaque module. Données vivantes, non
+   * persistées : elles n'ont d'intérêt que récentes.
+   */
+  private scans: Map<string, ScanResult> = new Map();
+
   /** Agrégats horaires par antenne, conservés 30 jours. */
   private history: HistoryStore = {};
   private historyLoaded = false;
@@ -482,6 +490,38 @@ class IoTStore {
 
   acknowledgeAlert(alertId: string): void {
     this.acknowledgedAlerts.add(alertId);
+  }
+
+  /* ---------------- Balayages radio ---------------- */
+
+  /** Enregistre les antennes captées par un module. */
+  recordScan(antennaId: string, networks: DetectedNetwork[]): ScanResult | null {
+    if (!this.antennas.some((a) => a.id === antennaId)) return null;
+
+    const result: ScanResult = {
+      antennaId,
+      at: now(),
+      // Du signal le plus fort au plus faible, pour un affichage direct.
+      networks: [...networks].sort((a, b) => b.rssi - a.rssi),
+    };
+    this.scans.set(antennaId, result);
+    return result;
+  }
+
+  /** Dernier balayage d'un module, s'il est encore récent. */
+  getScan(antennaId: string): ScanResult | null {
+    const scan = this.scans.get(antennaId);
+    if (!scan) return null;
+    // Au-delà d'une heure, l'information n'est plus représentative.
+    if (Date.now() - new Date(scan.at).getTime() > 3600_000) return null;
+    return scan;
+  }
+
+  /** Derniers balayages de tous les modules. */
+  getScans(): ScanResult[] {
+    return this.antennas
+      .map((a) => this.getScan(a.id))
+      .filter((s): s is ScanResult => s !== null);
   }
 
   /* ---------------- Historique long terme ---------------- */

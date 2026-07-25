@@ -2,7 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
-import type { Alert, Antenna, DashboardStats, Site, TelemetryPoint } from "@/lib/types";
+import type {
+  Alert,
+  Antenna,
+  DashboardStats,
+  ScanResult,
+  Site,
+  TelemetryPoint,
+} from "@/lib/types";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
 import StatsCards from "./StatsCards";
@@ -33,6 +40,7 @@ export default function Dashboard() {
   const [antennas, setAntennas] = useState<Antenna[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [scans, setScans] = useState<ScanResult[]>([]);
   const [selectedAntennaId, setSelectedAntennaId] = useState<string | null>(null);
   const [linkTxId, setLinkTxId] = useState<string | null>(null);
   const [linkRxId, setLinkRxId] = useState<string | null>(null);
@@ -48,6 +56,7 @@ export default function Dashboard() {
       setAntennas(data.antennas);
       setStats(data.stats);
       setAlerts(data.alerts);
+      setScans(data.scans ?? []);
       setLastUpdate(new Date());
     } catch (err) {
       console.error("Erreur chargement dashboard:", err);
@@ -150,6 +159,7 @@ export default function Dashboard() {
                   onSelectAntenna={setSelectedAntennaId}
                   linkTxId={linkTxId}
                   linkRxId={linkRxId}
+                  scans={scans}
                 />
               </div>
               <div className="space-y-4">
@@ -185,6 +195,7 @@ export default function Dashboard() {
                 onSelectAntenna={setSelectedAntennaId}
                 linkTxId={linkTxId}
                 linkRxId={linkRxId}
+                scans={scans}
               />
             </div>
           )}

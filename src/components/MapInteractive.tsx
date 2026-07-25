@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { APIProvider, Map, Marker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
-import type { Antenna, Site } from "@/lib/types";
+import type { Antenna, ScanResult, Site } from "@/lib/types";
 import type { NearbyAntenna } from "@/lib/nearbyAntennas";
+import { estimateDistanceFromRssi } from "@/lib/serialParse";
 import {
   coverageRadiusMeters,
   formatDistance,
@@ -27,7 +28,45 @@ interface MapInteractiveProps {
   showCoverage?: boolean;
   /** Antennes réelles des opérateurs (OpenStreetMap). */
   realAntennas?: NearbyAntenna[];
+  /** Derniers balayages radio remontés par les modules. */
+  scans?: ScanResult[];
   onFallback: () => void;
+}
+
+/**
+ * Antennes captées par un module : un cercle par émetteur détecté, dont
+ * le rayon correspond à la distance estimée d'après la puissance reçue.
+ *
+ * Un cercle plutôt qu'un point : le module mesure une distance, pas une
+ * direction — l'émetteur peut se trouver n'importe où sur cet anneau.
+ */
+function DetectedLayer({ scan, antenna }: { scan: ScanResult; antenna: Antenna }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || typeof google === "undefined") return;
+
+    // Les cinq signaux les plus forts : au-delà, la carte devient illisible.
+    const circles = scan.networks.slice(0, 5).map((net) => {
+      const radius = Math.max(15, estimateDistanceFromRssi(net.rssi));
+      const color = net.rssi >= -60 ? "#22c55e" : net.rssi >= -75 ? "#f59e0b" : "#ef4444";
+      return new google.maps.Circle({
+        center: { lat: antenna.lat, lng: antenna.lng },
+        radius,
+        strokeColor: color,
+        strokeOpacity: 0.7,
+        strokeWeight: 1.5,
+        fillOpacity: 0,
+        clickable: false,
+        map,
+        zIndex: 20,
+      });
+    });
+
+    return () => circles.forEach((c) => c.setMap(null));
+  }, [map, scan, antenna.lat, antenna.lng]);
+
+  return null;
 }
 
 /** Cercles de couverture estimée autour de chaque antenne. */
@@ -104,6 +143,7 @@ export default function MapInteractive({
   linkRxId = null,
   showCoverage = false,
   realAntennas = [],
+  scans = [],
   onFallback,
 }: MapInteractiveProps) {
   const [infoId, setInfoId] = useState<string | null>(null);
@@ -177,6 +217,15 @@ export default function MapInteractive({
         )}
 
         {showCoverage && <CoverageLayer antennas={antennas} />}
+
+        {/* Antennes captees par le module selectionne */}
+        {(() => {
+          if (!selectedAntennaId) return null;
+          const scan = scans.find((s) => s.antennaId === selectedAntennaId);
+          const antenna = antennas.find((a) => a.id === selectedAntennaId);
+          if (!scan || !antenna) return null;
+          return <DetectedLayer scan={scan} antenna={antenna} />;
+        })()}
 
         {/* Antennes reelles des operateurs : marqueurs violets, non supervisees */}
         {realAntennas.map((real) => (

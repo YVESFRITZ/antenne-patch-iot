@@ -63,6 +63,14 @@ export interface DetectedNetwork {
   encryption?: string;
 }
 
+/** Résultat d'un balayage radio effectué par un module. */
+export interface ScanResult {
+  antennaId: string;
+  /** Date du balayage, au format ISO. */
+  at: string;
+  networks: DetectedNetwork[];
+}
+
 /** Seuils déclenchant les alertes, réglables depuis l'interface. */
 export interface Thresholds {
   /** Batterie basse (%) — en dessous, alerte. */

@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { haversineDistance } from "@/lib/utils";
-import type { Antenna, AntennaStatus, Site } from "@/lib/types";
+import type { Antenna, AntennaStatus, ScanResult, Site } from "@/lib/types";
 import { statusColor, statusLabel } from "@/lib/utils";
 import { DEFAULT_CENTER } from "@/lib/mapStyles";
 import { GOOGLE_MAPS_CONFIG, MAP_DEFAULTS } from "@/lib/googleMapsConfig";
@@ -30,6 +30,8 @@ interface MapViewProps {
   onSelectAntenna: (id: string | null) => void;
   linkTxId?: string | null;
   linkRxId?: string | null;
+  /** Derniers balayages radio remontés par les modules. */
+  scans?: ScanResult[];
 }
 
 const MAP_HEIGHT = MAP_DEFAULTS.minHeight;
@@ -41,6 +43,7 @@ export default function MapView({
   onSelectAntenna,
   linkTxId = null,
   linkRxId = null,
+  scans = [],
 }: MapViewProps) {
   const apiKey = GOOGLE_MAPS_CONFIG.apiKey;
   const {
@@ -142,6 +145,7 @@ export default function MapView({
           linkRxId={linkRxId}
           showCoverage={showCoverage}
           realAntennas={showReal ? realAntennas : []}
+          scans={scans}
           onFallback={() => setMode("osm")}
         />
       ) : mode === "osm" ? (
@@ -308,6 +312,26 @@ export default function MapView({
           {geoError && <span className="ml-2 text-status-warning">{geoError}</span>}
           {realError && <span className="ml-2 text-status-warning">{realError}</span>}
         </div>
+
+        {selectedAntennaId &&
+          (() => {
+            const scan = scans.find((s) => s.antennaId === selectedAntennaId);
+            if (!scan) return null;
+            return (
+              <div className="glass mt-2 rounded-lg px-3 py-2 text-[11px] text-slate-300">
+                <span className="text-status-online">◎</span>{" "}
+                <span className="text-white">{scan.networks.length}</span> antennes captées
+                par ce module — cercles = distance estimée depuis la puissance reçue
+                {scan.networks[0] && (
+                  <>
+                    {" · plus fort : "}
+                    <span className="font-mono text-white">{scan.networks[0].ssid}</span>{" "}
+                    ({scan.networks[0].rssi} dBm)
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
         {showReal && realAntennas.length > 0 && (
           <div className="glass mt-2 rounded-lg px-3 py-2 text-[11px] text-slate-400">

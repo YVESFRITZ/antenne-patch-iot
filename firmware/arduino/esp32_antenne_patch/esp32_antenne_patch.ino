@@ -36,6 +36,9 @@ unsigned long lastSend = 0;
 unsigned long lastScan = 0;
 int connectedDevices = 0;
 
+// Declaration anticipee : scanNetworks() l'utilise avant sa definition.
+bool postJson(const char *path, const String &payload);
+
 void setup() {
   Serial.begin(115200);
   delay(500);
@@ -180,10 +183,17 @@ void scanNetworks() {
 
   String payload;
   serializeJson(doc, payload);
+
+#ifdef USB_JSON_OUTPUT
   Serial.println(payload);   // lu par l'onglet "Equipement USB"
+#endif
 
   Serial.print("Reseaux captes : ");
   Serial.println(found);
+
+  // Remontee par WiFi : les antennes captees s'affichent alors sur la
+  // carte, meme sans cable USB branche.
+  postJson("/api/scan", payload);
 
   WiFi.scanDelete();   // libere la memoire du resultat
 }
@@ -219,18 +229,23 @@ String buildPayload() {
   return payload;
 }
 
-bool sendTelemetry(const String &payload) {
+/**
+ * Envoie un contenu JSON vers l'application.
+ * @param path   chemin de l'API, ex. "/api/telemetry"
+ * @param payload corps de la requete
+ */
+bool postJson(const char *path, const String &payload) {
   if (WiFi.status() != WL_CONNECTED) return false;
 
   String url;
 #ifdef USE_TLS
-  url = String("https://") + SERVER_HOST + "/api/telemetry";
+  url = String("https://") + SERVER_HOST + path;
   WiFiClientSecure client;
   // Pas de verification du certificat : suffisant ici, la cle API
   // authentifie le module aupres du serveur.
   client.setInsecure();
 #else
-  url = String("http://") + SERVER_HOST + ":" + String(SERVER_PORT) + "/api/telemetry";
+  url = String("http://") + SERVER_HOST + ":" + String(SERVER_PORT) + path;
 #endif
 
   HTTPClient http;
@@ -248,17 +263,24 @@ bool sendTelemetry(const String &payload) {
   http.end();
 
   if (httpCode == 200) {
-    Serial.println("OK — Telemetrie envoyee");
+    Serial.print("OK — envoye vers ");
+    Serial.println(path);
     return true;
   }
 
   Serial.print("ERREUR HTTP ");
-  Serial.println(httpCode);
+  Serial.print(httpCode);
+  Serial.print(" sur ");
+  Serial.println(path);
   if (httpCode == 401) {
     Serial.println("   -> cle API refusee, verifiez API_KEY dans config.h");
   }
   Serial.println(response);
   return false;
+}
+
+bool sendTelemetry(const String &payload) {
+  return postJson("/api/telemetry", payload);
 }
 
 void loop() {

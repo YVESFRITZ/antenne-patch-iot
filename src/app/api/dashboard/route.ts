@@ -9,5 +9,6 @@ export async function GET() {
     antennas: store.getAntennas(),
     sites: store.getSites(),
     thresholds: store.getThresholds(),
+    scans: store.getScans(),
   });
 }
