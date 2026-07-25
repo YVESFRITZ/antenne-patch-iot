@@ -13,7 +13,7 @@ import LinkCalculator from "./LinkCalculator";
 import DevicePanel from "./DevicePanel";
 import ManagementPanel from "./ManagementPanel";
 import ThresholdSettings from "./ThresholdSettings";
-import { Radio, RefreshCw, Search } from "lucide-react";
+import { Download, Radio, RefreshCw, Search } from "lucide-react";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
@@ -259,6 +259,29 @@ export default function Dashboard() {
           {activeTab === "settings" && (
             <div className="mt-4 max-w-2xl space-y-4">
               <ThresholdSettings onChanged={fetchData} />
+
+              <div className="glass rounded-xl p-6">
+                <h3 className="mb-2 text-sm font-semibold text-white">
+                  Historique et export
+                </h3>
+                <p className="mb-4 text-sm text-slate-400">
+                  Les mesures sont agrégées par heure et conservées 30 jours.
+                  Téléchargez-les au format CSV pour vos rapports (ouvrable dans
+                  Excel ou LibreOffice).
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(["24h", "7d", "30d"] as const).map((r) => (
+                    <a
+                      key={r}
+                      href={`/api/export?range=${r}`}
+                      className="flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent hover:bg-accent/20"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      {r === "24h" ? "24 heures" : r === "7d" ? "7 jours" : "30 jours"}
+                    </a>
+                  ))}
+                </div>
+              </div>
               <div className="glass rounded-xl p-6">
                 <h3 className="mb-4 text-sm font-semibold text-white">
                   Google Maps — Configuré

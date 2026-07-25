@@ -12,6 +12,15 @@ import type {
 } from "./types";
 import { DEFAULT_THRESHOLDS } from "./types";
 import { loadConfig, saveConfig, type StoredConfig } from "./persistence";
+import {
+  addSample,
+  filterRange,
+  loadHistory,
+  saveHistory,
+  type HistoryRange,
+  type HistoryStore,
+  type HourlyBucket,
+} from "./history";
 
 const now = () => new Date().toISOString();
 
@@ -20,6 +29,13 @@ const now = () => new Date().toISOString();
  * Passé ce délai, la prochaine requête revérifie la sauvegarde partagée.
  */
 const CONFIG_CACHE_MS = 2000;
+
+/**
+ * Intervalle minimal entre deux écritures de l'historique. Les modules
+ * émettent toutes les 10 s : sans cette limite, on écrirait le stockage
+ * bien plus souvent que nécessaire pour des agrégats horaires.
+ */
+const HISTORY_WRITE_MS = 60_000;
 
 /** Ramène une valeur dans un intervalle, en ignorant les entrées invalides. */
 function clamp(value: number, min: number, max: number): number {
@@ -273,6 +289,13 @@ class IoTStore {
   /** Dernière vérification du support de sauvegarde. */
   private lastCheckAt = 0;
 
+  /** Agrégats horaires par antenne, conservés 30 jours. */
+  private history: HistoryStore = {};
+  private historyLoaded = false;
+  private historyLoading: Promise<void> | null = null;
+  private historyDirty = false;
+  private lastHistoryWrite = 0;
+
   constructor() {
     for (const antenna of this.antennas) {
       this.telemetryHistory.set(antenna.id, this.generateHistory(antenna));
@@ -461,6 +484,61 @@ class IoTStore {
     this.acknowledgedAlerts.add(alertId);
   }
 
+  /* ---------------- Historique long terme ---------------- */
+
+  /** Charge l'historique agrégé (une fois par instance). */
+  async ensureHistoryLoaded(): Promise<void> {
+    if (this.historyLoaded) return;
+    if (this.historyLoading) {
+      await this.historyLoading;
+      return;
+    }
+    this.historyLoading = (async () => {
+      this.history = await loadHistory();
+      this.historyLoaded = true;
+    })();
+    try {
+      await this.historyLoading;
+    } finally {
+      this.historyLoading = null;
+    }
+  }
+
+  /** Intègre une mesure dans l'historique agrégé, puis écrit si nécessaire. */
+  private async recordHistory(antennaId: string, point: TelemetryPoint): Promise<void> {
+    await this.ensureHistoryLoaded();
+    this.history[antennaId] = addSample(this.history[antennaId] ?? [], point);
+    this.historyDirty = true;
+
+    // Écriture limitée : les agrégats horaires n'ont pas besoin d'être
+    // sauvegardés à chaque mesure reçue.
+    if (Date.now() - this.lastHistoryWrite < HISTORY_WRITE_MS) return;
+    this.lastHistoryWrite = Date.now();
+    this.historyDirty = false;
+    try {
+      await saveHistory(this.history);
+    } catch {
+      // Une écriture ratée sera retentée à la mesure suivante.
+      this.historyDirty = true;
+    }
+  }
+
+  /** Historique agrégé d'une antenne sur la période demandée. */
+  async getHistory(antennaId: string, range: HistoryRange): Promise<HourlyBucket[]> {
+    await this.ensureHistoryLoaded();
+    return filterRange(this.history[antennaId] ?? [], range);
+  }
+
+  /** Historique agrégé de toutes les antennes sur la période demandée. */
+  async getAllHistory(range: HistoryRange): Promise<HistoryStore> {
+    await this.ensureHistoryLoaded();
+    const result: HistoryStore = {};
+    for (const [id, buckets] of Object.entries(this.history)) {
+      result[id] = filterRange(buckets, range);
+    }
+    return result;
+  }
+
   /* ---------------- Seuils d'alerte ---------------- */
 
   getThresholds(): Thresholds {
@@ -602,7 +680,7 @@ class IoTStore {
     };
   }
 
-  receiveAntennaPayload(payload: AntennaPayload): Antenna | null {
+  async receiveAntennaPayload(payload: AntennaPayload): Promise<Antenna | null> {
     const index = this.antennas.findIndex((a) => a.id === payload.antennaId);
     if (index === -1) return null;
 
@@ -633,16 +711,21 @@ class IoTStore {
     updated.status = computeStatus(updated, this.thresholds);
     this.antennas[index] = updated;
 
-    const history = this.telemetryHistory.get(updated.id) ?? [];
-    history.push({
+    const point: TelemetryPoint = {
       timestamp: now(),
       signalStrength: updated.signalStrength,
       temperature: updated.temperature,
       humidity: updated.humidity,
       battery: updated.battery,
-    });
+    };
+
+    const history = this.telemetryHistory.get(updated.id) ?? [];
+    history.push(point);
     if (history.length > 48) history.shift();
     this.telemetryHistory.set(updated.id, history);
+
+    // Historique long terme (agrégats horaires conservés 30 jours).
+    await this.recordHistory(updated.id, point);
 
     this.sites = updateSiteStatuses(this.sites, this.antennas);
     return updated;

@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Antenna, TelemetryPoint } from "@/lib/types";
+import type { HistoryRange, HourlyBucket } from "@/lib/history";
 import { formatTime, signalBars, statusColor, statusLabel } from "@/lib/utils";
 import {
   Battery,
   Cpu,
+  Download,
   Droplets,
   Signal,
   Thermometer,
@@ -54,10 +57,44 @@ function MetricCard({
   );
 }
 
+const RANGES: { id: HistoryRange | "live"; label: string }[] = [
+  { id: "live", label: "Direct" },
+  { id: "24h", label: "24 h" },
+  { id: "7d", label: "7 j" },
+  { id: "30d", label: "30 j" },
+];
+
 export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPanelProps) {
+  const [range, setRange] = useState<HistoryRange | "live">("live");
+  const [buckets, setBuckets] = useState<HourlyBucket[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const antennaId = antenna?.id;
+
+  // Historique agrégé : chargé uniquement quand une période est demandée.
+  useEffect(() => {
+    if (!antennaId || range === "live") return;
+    let cancelled = false;
+    setLoadingHistory(true);
+    fetch(`/api/history?antennaId=${antennaId}&range=${range}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setBuckets(d.buckets ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setBuckets([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingHistory(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [antennaId, range]);
+
   if (!antenna) return null;
 
-  const chartData = telemetry.map((t) => ({
+  const liveData = telemetry.map((t) => ({
     time: new Date(t.timestamp).toLocaleTimeString("fr-FR", {
       hour: "2-digit",
       minute: "2-digit",
@@ -65,6 +102,22 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
     signal: Math.round(t.signalStrength),
     temp: Math.round(t.temperature * 10) / 10,
   }));
+
+  const historyData = buckets.map((b) => ({
+    time: new Date(b.hour).toLocaleString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+    }),
+    signal: Math.round(b.signalAvg),
+    temp: Math.round(b.temperatureAvg * 10) / 10,
+  }));
+
+  const chartData = range === "live" ? liveData : historyData;
+  const chartLabel =
+    range === "live"
+      ? "Historique signal (temps réel)"
+      : `Signal moyen par heure — ${RANGES.find((r) => r.id === range)?.label}`;
 
   const bars = signalBars(antenna.signalStrength);
 
@@ -147,11 +200,46 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
           </div>
         </div>
 
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {RANGES.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setRange(r.id)}
+              className={`rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+                range === r.id
+                  ? "bg-accent text-black"
+                  : "bg-surface-overlay text-slate-300 hover:bg-surface-overlay/70"
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+          <a
+            href={`/api/export?antennaId=${antenna.id}&range=30d`}
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-surface-overlay px-2.5 py-1 text-[11px] text-slate-300 hover:text-white"
+            title="Exporter l'historique 30 jours au format CSV"
+          >
+            <Download className="h-3 w-3" />
+            CSV
+          </a>
+        </div>
+
+        {loadingHistory && (
+          <p className="mb-2 text-xs text-slate-500">Chargement de l&apos;historique…</p>
+        )}
+
+        {!loadingHistory && range !== "live" && chartData.length === 0 && (
+          <p className="rounded-lg bg-surface-overlay/40 p-3 text-xs text-slate-400">
+            Aucune donnée sur cette période. L&apos;historique se construit à mesure que
+            les modules transmettent (un point par heure).
+          </p>
+        )}
+
         {chartData.length > 0 && (
           <div>
             <div className="mb-2 flex items-center gap-2 text-xs text-slate-400">
               <Signal className="h-3.5 w-3.5 text-accent" />
-              Historique signal (24h)
+              {chartLabel}
             </div>
             <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">

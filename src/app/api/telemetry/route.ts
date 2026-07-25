@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "antennaId requis" }, { status: 400 });
     }
 
-    const updated = store.receiveAntennaPayload(payload);
+    const updated = await store.receiveAntennaPayload(payload);
     if (!updated) {
       return NextResponse.json({ error: "Antenne introuvable" }, { status: 404 });
     }
