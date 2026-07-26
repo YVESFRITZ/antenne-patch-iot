@@ -97,7 +97,7 @@ export default function MapView({
     <div className="relative overflow-hidden rounded-xl border border-surface-overlay" style={{ height: MAP_HEIGHT }}>
       {geoLoading ? (
         <div className="flex h-full items-center justify-center bg-surface-raised">
-          <div className="flex items-center gap-2 text-slate-400">
+          <div className="flex items-center gap-2 text-ink-muted">
             <Navigation className="h-5 w-5 animate-spin" />
             Recherche de votre position...
           </div>
@@ -125,8 +125,8 @@ export default function MapView({
           aria-label="Filtres"
           className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium shadow-lg ${
             filtersActive
-              ? "bg-accent text-black"
-              : "bg-surface-overlay/90 text-white hover:bg-surface-overlay"
+              ? "bg-accent text-white"
+              : "bg-surface-overlay/90 text-ink hover:bg-surface-overlay"
           }`}
         >
           <Filter className="h-4 w-4" />
@@ -138,7 +138,7 @@ export default function MapView({
           className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium shadow-lg ${
             showReal
               ? "bg-purple-500 text-white"
-              : "bg-surface-overlay/90 text-white hover:bg-surface-overlay"
+              : "bg-surface-overlay/90 text-ink hover:bg-surface-overlay"
           }`}
         >
           <RadioTower className="h-4 w-4" />
@@ -150,8 +150,8 @@ export default function MapView({
           title="Zones de couverture"
           className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium shadow-lg ${
             showCoverage
-              ? "bg-accent text-black"
-              : "bg-surface-overlay/90 text-white hover:bg-surface-overlay"
+              ? "bg-accent text-white"
+              : "bg-surface-overlay/90 text-ink hover:bg-surface-overlay"
           }`}
         >
           <Radar className="h-4 w-4" />
@@ -165,7 +165,7 @@ export default function MapView({
         </button>
         <button
           onClick={() => setTileStyle(tileStyle === "plan" ? "satellite" : "plan")}
-          className="flex items-center gap-1.5 rounded-lg bg-surface-overlay/90 px-3 py-2 text-xs font-medium text-white shadow-lg hover:bg-surface-overlay"
+          className="flex items-center gap-1.5 rounded-lg bg-surface-overlay/90 px-3 py-2 text-xs font-medium text-ink shadow-lg hover:bg-surface-overlay"
         >
           <Layers className="h-4 w-4" />
           {tileStyle === "plan" ? "Plan" : "Satellite"}
@@ -173,29 +173,29 @@ export default function MapView({
       </div>
 
       {showFilters && (
-        <div className="glass absolute left-3 right-3 top-3 z-30 rounded-xl p-3 sm:right-auto sm:w-72">
+        <div className="panel absolute left-3 right-3 top-3 z-30 rounded-xl p-3 sm:right-auto sm:w-72">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold text-white">Filtrer les antennes</span>
+            <span className="text-xs font-semibold text-ink">Filtrer les antennes</span>
             <button
               onClick={() => setShowFilters(false)}
               aria-label="Fermer les filtres"
-              className="text-slate-400 hover:text-white"
+              className="text-ink-muted hover:text-ink"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           <div className="relative mb-2">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-muted" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Nom ou identifiant…"
-              className="w-full rounded-lg border border-surface-overlay bg-surface-raised py-2 pl-8 pr-2 text-xs text-white placeholder-slate-500 outline-none focus:border-accent/50"
+              className="w-full rounded-lg border border-surface-overlay bg-surface-raised py-2 pl-8 pr-2 text-xs text-ink placeholder-ink-subtle outline-none focus:border-accent/50"
             />
           </div>
 
-          <p className="mb-1 text-[11px] text-slate-400">Statut</p>
+          <p className="mb-1 text-[11px] text-ink-muted">Statut</p>
           <div className="mb-2 flex flex-wrap gap-1">
             {(["all", "online", "warning", "offline", "idle"] as const).map((s) => (
               <button
@@ -203,8 +203,8 @@ export default function MapView({
                 onClick={() => setStatusFilter(s)}
                 className={`rounded-full px-2.5 py-1 text-[11px] ${
                   statusFilter === s
-                    ? "bg-accent text-black"
-                    : "bg-surface-overlay text-slate-300 hover:bg-surface-overlay/70"
+                    ? "bg-accent text-white"
+                    : "bg-surface-overlay text-ink-muted hover:bg-surface-overlay/70"
                 }`}
               >
                 {s === "all" ? "Tous" : statusLabel(s)}
@@ -212,7 +212,7 @@ export default function MapView({
             ))}
           </div>
 
-          <p className="mb-1 text-[11px] text-slate-400">Type</p>
+          <p className="mb-1 text-[11px] text-ink-muted">Type</p>
           <div className="flex flex-wrap gap-1">
             {(["all", "LoRa", "4G", "WiFi", "Satellite"] as const).map((t) => (
               <button
@@ -220,8 +220,8 @@ export default function MapView({
                 onClick={() => setTypeFilter(t)}
                 className={`rounded-full px-2.5 py-1 text-[11px] ${
                   typeFilter === t
-                    ? "bg-accent text-black"
-                    : "bg-surface-overlay text-slate-300 hover:bg-surface-overlay/70"
+                    ? "bg-accent text-white"
+                    : "bg-surface-overlay text-ink-muted hover:bg-surface-overlay/70"
                 }`}
               >
                 {t === "all" ? "Tous" : t}
@@ -236,7 +236,7 @@ export default function MapView({
                 setTypeFilter("all");
                 setSearch("");
               }}
-              className="mt-3 w-full rounded-lg bg-surface-overlay py-1.5 text-[11px] text-slate-300 hover:text-white"
+              className="mt-3 w-full rounded-lg bg-surface-overlay py-1.5 text-[11px] text-ink-muted hover:text-ink"
             >
               Réinitialiser les filtres
             </button>
@@ -245,11 +245,11 @@ export default function MapView({
       )}
 
       <div className="absolute bottom-3 left-3 right-3 z-20">
-        <div className="glass rounded-lg px-3 py-2 text-xs text-slate-300">
+        <div className="panel rounded-lg px-3 py-2 text-xs text-ink-muted">
           {userPosition ? (
             <span>
               <span className="text-blue-400">●</span>{" "}
-              <span className="font-mono text-white">
+              <span className="font-mono text-ink">
                 {userPosition.lat.toFixed(4)}, {userPosition.lng.toFixed(4)}
               </span>
               {" "}({userPosition.source === "gps" ? "GPS" : userPosition.source === "ip" ? "IP" : "défaut"}
@@ -280,14 +280,14 @@ export default function MapView({
             const scan = scans.find((s) => s.antennaId === selectedAntennaId);
             if (!scan) return null;
             return (
-              <div className="glass mt-2 rounded-lg px-3 py-2 text-[11px] text-slate-300">
+              <div className="panel mt-2 rounded-lg px-3 py-2 text-[11px] text-ink-muted">
                 <span className="text-status-online">◎</span>{" "}
-                <span className="text-white">{scan.networks.length}</span> antennes captées
+                <span className="text-ink">{scan.networks.length}</span> antennes captées
                 par ce module — cercles = distance estimée depuis la puissance reçue
                 {scan.networks[0] && (
                   <>
                     {" · plus fort : "}
-                    <span className="font-mono text-white">{scan.networks[0].ssid}</span>{" "}
+                    <span className="font-mono text-ink">{scan.networks[0].ssid}</span>{" "}
                     ({scan.networks[0].rssi} dBm)
                   </>
                 )}
@@ -296,10 +296,10 @@ export default function MapView({
           })()}
 
         {showReal && realAntennas.length > 0 && (
-          <div className="glass mt-2 rounded-lg px-3 py-2 text-[11px] text-slate-400">
+          <div className="panel mt-2 rounded-lg px-3 py-2 text-[11px] text-ink-muted">
             <span className="text-purple-400">◆</span> Antennes des opérateurs
             (OpenStreetMap) — la plus proche à{" "}
-            <span className="font-mono text-white">
+            <span className="font-mono text-ink">
               {realAntennas[0].distanceMeters < 1000
                 ? `${realAntennas[0].distanceMeters} m`
                 : `${(realAntennas[0].distanceMeters / 1000).toFixed(1)} km`}
@@ -309,7 +309,7 @@ export default function MapView({
             <select
               value={realRadius}
               onChange={(e) => setRealRadius(Number(e.target.value))}
-              className="rounded bg-surface-overlay px-1 py-0.5 text-[11px] text-white outline-none"
+              className="rounded bg-surface-overlay px-1 py-0.5 text-[11px] text-ink outline-none"
             >
               <option value={2000}>2 km</option>
               <option value={5000}>5 km</option>
@@ -326,8 +326,8 @@ export default function MapView({
                 onClick={() => onSelectAntenna(a.id)}
                 className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-mono transition ${
                   selectedAntennaId === a.id
-                    ? "bg-accent text-black"
-                    : "bg-surface-overlay text-slate-300 hover:bg-surface-overlay/80"
+                    ? "bg-accent text-white"
+                    : "bg-surface-overlay text-ink-muted hover:bg-surface-overlay/80"
                 }`}
                 style={{ borderLeft: `3px solid ${statusColor(a.status)}` }}
               >

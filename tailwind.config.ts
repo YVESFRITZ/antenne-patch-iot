@@ -9,21 +9,30 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Surfaces claires : page, cartes, remplissages discrets.
         surface: {
-          DEFAULT: "#0f1419",
-          raised: "#1a2332",
-          overlay: "#243044",
+          DEFAULT: "#f5f7fa",
+          raised: "#ffffff",
+          overlay: "#e8edf4",
         },
+        // Texte, du plus contrasté au plus discret.
+        ink: {
+          DEFAULT: "#0f172a",
+          muted: "#5b6b82",
+          subtle: "#94a3b8",
+        },
+        // Teal assombri pour rester lisible sur fond blanc.
         accent: {
-          DEFAULT: "#00d4aa",
-          dim: "#00a888",
-          glow: "#00ffc8",
+          DEFAULT: "#0d9488",
+          dim: "#0f766e",
+          soft: "#ccfbf1",
+          glow: "#14b8a6",
         },
         status: {
-          online: "#22c55e",
-          warning: "#f59e0b",
-          offline: "#ef4444",
-          idle: "#64748b",
+          online: "#16a34a",
+          warning: "#d97706",
+          offline: "#dc2626",
+          idle: "#94a3b8",
         },
       },
       fontFamily: {
@@ -31,8 +40,10 @@ const config: Config = {
         mono: ["var(--font-geist-mono)", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 20px rgba(0, 212, 170, 0.15)",
-        "glow-lg": "0 0 40px rgba(0, 212, 170, 0.25)",
+        card: "0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.06)",
+        "card-hover": "0 2px 4px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.10)",
+        glow: "0 0 0 3px rgba(13, 148, 136, 0.12)",
+        "glow-lg": "0 8px 24px rgba(13, 148, 136, 0.18)",
       },
       animation: {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",

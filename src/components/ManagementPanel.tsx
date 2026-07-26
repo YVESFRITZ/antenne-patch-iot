@@ -24,8 +24,8 @@ interface ManagementPanelProps {
 const ANTENNA_TYPES: Antenna["type"][] = ["LoRa", "4G", "WiFi", "Satellite"];
 
 const inputClass =
-  "w-full rounded-xl border border-surface-overlay bg-surface-raised px-3 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-accent/50";
-const labelClass = "mb-1.5 block text-xs font-medium text-slate-400";
+  "w-full rounded-xl border border-surface-overlay bg-surface-raised px-3 py-2.5 text-sm text-ink placeholder-ink-subtle outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10";
+const labelClass = "mb-1.5 block text-xs font-medium text-ink-muted";
 
 interface SiteDraft {
   id?: string;
@@ -178,10 +178,10 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
         <div className="glass rounded-xl border-l-4 border-status-warning p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-white">
+              <p className="text-sm font-medium text-ink">
                 {demoCount} site(s) de démonstration
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-ink-muted">
                 Ces sites (Lyon) sont des exemples livrés avec l&apos;application : ce
                 ne sont pas de vraies antennes. Supprimez-les pour ne garder que
                 votre matériel.
@@ -198,7 +198,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                 </button>
                 <button
                   onClick={() => setConfirmDemo(false)}
-                  className="rounded-lg px-3 py-2 text-xs text-slate-400 hover:text-white"
+                  className="rounded-lg px-3 py-2 text-xs text-ink-muted hover:text-ink"
                 >
                   Annuler
                 </button>
@@ -230,8 +230,8 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-accent" />
-            <h3 className="text-sm font-semibold text-white">
-              Sites <span className="text-slate-500">({sites.length})</span>
+            <h3 className="text-sm font-semibold text-ink">
+              Sites <span className="text-ink-subtle">({sites.length})</span>
             </h3>
           </div>
           <button
@@ -242,7 +242,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                 lng: position ? position.lng.toFixed(6) : "",
               })
             }
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-bold text-black hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-bold text-white hover:opacity-90"
           >
             <Plus className="h-3.5 w-3.5" />
             Ajouter
@@ -316,13 +316,13 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
               <button
                 onClick={saveSite}
                 disabled={busy}
-                className="rounded-lg bg-accent px-4 py-2 text-xs font-bold text-black hover:opacity-90 disabled:opacity-40"
+                className="rounded-lg bg-accent px-4 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-40"
               >
                 {busy ? "Enregistrement…" : "Enregistrer"}
               </button>
               <button
                 onClick={() => setSiteDraft(null)}
-                className="rounded-lg px-3 py-2 text-xs text-slate-400 hover:text-white"
+                className="rounded-lg px-3 py-2 text-xs text-ink-muted hover:text-ink"
               >
                 Annuler
               </button>
@@ -341,8 +341,8 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                 style={{ backgroundColor: statusColor(site.status) }}
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">{site.name}</p>
-                <p className="truncate text-xs text-slate-500">
+                <p className="truncate text-sm font-medium text-ink">{site.name}</p>
+                <p className="truncate text-xs text-ink-subtle">
                   {site.address || "sans adresse"} ·{" "}
                   <span className="font-mono">
                     {site.lat.toFixed(4)}, {site.lng.toFixed(4)}
@@ -362,7 +362,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                   })
                 }
                 aria-label="Modifier"
-                className="rounded-lg p-2 text-slate-400 hover:bg-surface-overlay hover:text-white"
+                className="rounded-lg p-2 text-ink-muted hover:bg-surface-overlay hover:text-ink"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
@@ -377,7 +377,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                   </button>
                   <button
                     onClick={() => setConfirmDelete(null)}
-                    className="rounded-lg px-2 py-1 text-[11px] text-slate-400"
+                    className="rounded-lg px-2 py-1 text-[11px] text-ink-muted"
                   >
                     Non
                   </button>
@@ -386,7 +386,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                 <button
                   onClick={() => setConfirmDelete(site.id)}
                   aria-label="Supprimer"
-                  className="rounded-lg p-2 text-slate-400 hover:bg-status-offline/15 hover:text-status-offline"
+                  className="rounded-lg p-2 text-ink-muted hover:bg-status-offline/15 hover:text-status-offline"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -394,7 +394,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
             </li>
           ))}
           {sites.length === 0 && (
-            <li className="rounded-lg bg-surface-overlay/30 p-4 text-center text-sm text-slate-400">
+            <li className="rounded-lg bg-surface-overlay/30 p-4 text-center text-sm text-ink-muted">
               Aucun site. Cliquez sur « Ajouter » pour créer le premier.
             </li>
           )}
@@ -411,8 +411,8 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AntennaIcon className="h-5 w-5 text-accent" />
-            <h3 className="text-sm font-semibold text-white">
-              Antennes <span className="text-slate-500">({antennas.length})</span>
+            <h3 className="text-sm font-semibold text-ink">
+              Antennes <span className="text-ink-subtle">({antennas.length})</span>
             </h3>
           </div>
           <button
@@ -427,7 +427,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
               })
             }
             disabled={sites.length === 0}
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-bold text-black hover:opacity-90 disabled:opacity-40"
+            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-40"
           >
             <Plus className="h-3.5 w-3.5" />
             Ajouter
@@ -435,7 +435,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
         </div>
 
         {sites.length === 0 && (
-          <p className="mb-3 text-xs text-slate-500">Créez d&apos;abord un site.</p>
+          <p className="mb-3 text-xs text-ink-subtle">Créez d&apos;abord un site.</p>
         )}
 
         {antennaDraft && (
@@ -529,18 +529,18 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
               <button
                 onClick={saveAntenna}
                 disabled={busy}
-                className="rounded-lg bg-accent px-4 py-2 text-xs font-bold text-black hover:opacity-90 disabled:opacity-40"
+                className="rounded-lg bg-accent px-4 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-40"
               >
                 {busy ? "Enregistrement…" : "Enregistrer"}
               </button>
               <button
                 onClick={() => setAntennaDraft(null)}
-                className="rounded-lg px-3 py-2 text-xs text-slate-400 hover:text-white"
+                className="rounded-lg px-3 py-2 text-xs text-ink-muted hover:text-ink"
               >
                 Annuler
               </button>
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-ink-subtle">
               L&apos;identifiant sera généré automatiquement : reportez-le dans{" "}
               <span className="font-mono">ANTENNA_ID</span> du firmware Arduino.
             </p>
@@ -558,10 +558,10 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                 style={{ backgroundColor: statusColor(antenna.status) }}
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-mono text-sm font-medium text-white">
+                <p className="truncate font-mono text-sm font-medium text-ink">
                   {antenna.name}
                 </p>
-                <p className="truncate text-xs text-slate-500">
+                <p className="truncate text-xs text-ink-subtle">
                   <span className="font-mono text-accent">{antenna.id}</span> · {antenna.type} ·{" "}
                   {statusLabel(antenna.status)} ·{" "}
                   {sites.find((s) => s.id === antenna.siteId)?.name ?? "site inconnu"}
@@ -580,7 +580,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                   })
                 }
                 aria-label="Modifier"
-                className="rounded-lg p-2 text-slate-400 hover:bg-surface-overlay hover:text-white"
+                className="rounded-lg p-2 text-ink-muted hover:bg-surface-overlay hover:text-ink"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
@@ -595,7 +595,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                   </button>
                   <button
                     onClick={() => setConfirmDelete(null)}
-                    className="rounded-lg px-2 py-1 text-[11px] text-slate-400"
+                    className="rounded-lg px-2 py-1 text-[11px] text-ink-muted"
                   >
                     Non
                   </button>
@@ -604,7 +604,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
                 <button
                   onClick={() => setConfirmDelete(antenna.id)}
                   aria-label="Supprimer"
-                  className="rounded-lg p-2 text-slate-400 hover:bg-status-offline/15 hover:text-status-offline"
+                  className="rounded-lg p-2 text-ink-muted hover:bg-status-offline/15 hover:text-status-offline"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -612,7 +612,7 @@ export default function ManagementPanel({ sites, antennas, onChanged }: Manageme
             </li>
           ))}
           {antennas.length === 0 && (
-            <li className="rounded-lg bg-surface-overlay/30 p-4 text-center text-sm text-slate-400">
+            <li className="rounded-lg bg-surface-overlay/30 p-4 text-center text-sm text-ink-muted">
               Aucune antenne enregistrée.
             </li>
           )}

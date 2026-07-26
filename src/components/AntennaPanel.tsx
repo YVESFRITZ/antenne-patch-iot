@@ -45,13 +45,13 @@ function MetricCard({
 }) {
   return (
     <div className="rounded-lg bg-surface-overlay/50 p-3">
-      <div className="flex items-center gap-2 text-xs text-slate-400">
+      <div className="flex items-center gap-2 text-xs text-ink-muted">
         <Icon className={`h-3.5 w-3.5 ${color}`} />
         {label}
       </div>
-      <p className="mt-1 text-lg font-bold text-white">
+      <p className="mt-1 text-lg font-bold text-ink">
         {value}
-        {unit && <span className="ml-0.5 text-sm font-normal text-slate-400">{unit}</span>}
+        {unit && <span className="ml-0.5 text-sm font-normal text-ink-muted">{unit}</span>}
       </p>
     </div>
   );
@@ -132,13 +132,13 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
             />
             <h3 className="font-mono text-sm font-bold text-accent">{antenna.name}</h3>
           </div>
-          <p className="mt-0.5 text-xs text-slate-400">
+          <p className="mt-0.5 text-xs text-ink-muted">
             {antenna.type} · {statusLabel(antenna.status)} · {formatTime(antenna.lastSeen)}
           </p>
         </div>
         <button
           onClick={onClose}
-          className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-surface-overlay hover:text-white"
+          className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-surface-overlay hover:text-ink"
         >
           <X className="h-4 w-4" />
         </button>
@@ -159,8 +159,8 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
               />
             ))}
           </div>
-          <span className="text-2xl font-bold text-white">{antenna.signalStrength}%</span>
-          <span className="text-xs text-slate-400">force du signal</span>
+          <span className="text-2xl font-bold text-ink">{antenna.signalStrength}%</span>
+          <span className="text-xs text-ink-muted">force du signal</span>
         </div>
 
         <div className="mb-4 grid grid-cols-2 gap-2">
@@ -194,7 +194,7 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
         </div>
 
         <div className="mb-4 rounded-lg bg-surface-overlay/30 p-3">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2 text-xs text-ink-muted">
             <Cpu className="h-3.5 w-3.5" />
             Firmware {antenna.firmware}
           </div>
@@ -207,8 +207,8 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
               onClick={() => setRange(r.id)}
               className={`rounded-full px-2.5 py-1 text-[11px] transition-colors ${
                 range === r.id
-                  ? "bg-accent text-black"
-                  : "bg-surface-overlay text-slate-300 hover:bg-surface-overlay/70"
+                  ? "bg-accent text-white"
+                  : "bg-surface-overlay text-ink-muted hover:bg-surface-overlay/70"
               }`}
             >
               {r.label}
@@ -216,7 +216,7 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
           ))}
           <a
             href={`/api/export?antennaId=${antenna.id}&range=30d`}
-            className="ml-auto flex items-center gap-1.5 rounded-lg bg-surface-overlay px-2.5 py-1 text-[11px] text-slate-300 hover:text-white"
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-surface-overlay px-2.5 py-1 text-[11px] text-ink-muted hover:text-ink"
             title="Exporter l'historique 30 jours au format CSV"
           >
             <Download className="h-3 w-3" />
@@ -225,11 +225,11 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
         </div>
 
         {loadingHistory && (
-          <p className="mb-2 text-xs text-slate-500">Chargement de l&apos;historique…</p>
+          <p className="mb-2 text-xs text-ink-subtle">Chargement de l&apos;historique…</p>
         )}
 
         {!loadingHistory && range !== "live" && chartData.length === 0 && (
-          <p className="rounded-lg bg-surface-overlay/40 p-3 text-xs text-slate-400">
+          <p className="rounded-lg bg-surface-overlay/40 p-3 text-xs text-ink-muted">
             Aucune donnée sur cette période. L&apos;historique se construit à mesure que
             les modules transmettent (un point par heure).
           </p>
@@ -237,7 +237,7 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
 
         {chartData.length > 0 && (
           <div>
-            <div className="mb-2 flex items-center gap-2 text-xs text-slate-400">
+            <div className="mb-2 flex items-center gap-2 text-xs text-ink-muted">
               <Signal className="h-3.5 w-3.5 text-accent" />
               {chartLabel}
             </div>
@@ -246,8 +246,8 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="signalGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#00d4aa" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#00d4aa" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#0d9488" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#0d9488" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#243044" />
@@ -264,7 +264,7 @@ export default function AntennaPanel({ antenna, telemetry, onClose }: AntennaPan
                   <Area
                     type="monotone"
                     dataKey="signal"
-                    stroke="#00d4aa"
+                    stroke="#0d9488"
                     fill="url(#signalGrad)"
                     strokeWidth={2}
                   />

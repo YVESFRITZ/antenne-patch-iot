@@ -37,8 +37,8 @@ export default function AntennaList({ antennas, selectedId, onSelect }: AntennaL
                   />
                 </div>
                 <div>
-                  <p className="font-mono text-sm font-bold text-white">{antenna.name}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="font-mono text-sm font-bold text-ink">{antenna.name}</p>
+                  <p className="text-xs text-ink-muted">
                     {antenna.type} · {statusLabel(antenna.status)}
                   </p>
                 </div>
@@ -57,7 +57,7 @@ export default function AntennaList({ antennas, selectedId, onSelect }: AntennaL
               </div>
             </div>
 
-            <div className="mt-3 flex items-center gap-4 text-xs text-slate-400">
+            <div className="mt-3 flex items-center gap-4 text-xs text-ink-muted">
               <span className="flex items-center gap-1">
                 <Signal className="h-3 w-3" />
                 {antenna.signalStrength}%

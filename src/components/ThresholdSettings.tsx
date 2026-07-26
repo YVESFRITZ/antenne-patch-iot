@@ -104,8 +104,8 @@ export default function ThresholdSettings({ onChanged }: ThresholdSettingsProps)
 
   return (
     <div className="glass rounded-xl p-6">
-      <h3 className="mb-1 text-sm font-semibold text-white">Seuils d&apos;alerte</h3>
-      <p className="mb-4 text-sm text-slate-400">
+      <h3 className="mb-1 text-sm font-semibold text-ink">Seuils d&apos;alerte</h3>
+      <p className="mb-4 text-sm text-ink-muted">
         Réglez à partir de quand une antenne déclenche une alerte. Les changements
         s&apos;appliquent immédiatement à toutes les antennes.
       </p>
@@ -115,7 +115,7 @@ export default function ThresholdSettings({ onChanged }: ThresholdSettingsProps)
           const Icon = field.icon;
           return (
             <div key={field.key} className="rounded-lg bg-surface-overlay/40 p-3">
-              <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-300">
+              <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-ink-muted">
                 <Icon className={`h-3.5 w-3.5 ${field.color}`} />
                 {field.label}
               </label>
@@ -128,11 +128,11 @@ export default function ThresholdSettings({ onChanged }: ThresholdSettingsProps)
                   onChange={(e) =>
                     setValues({ ...values, [field.key]: Number(e.target.value) })
                   }
-                  className="w-full rounded-lg border border-surface-overlay bg-surface-raised px-3 py-2 text-sm text-white outline-none focus:border-accent/50"
+                  className="w-full rounded-lg border border-surface-overlay bg-surface-raised px-3 py-2 text-sm text-ink outline-none focus:border-accent/50"
                 />
-                <span className="shrink-0 text-xs text-slate-400">{field.unit}</span>
+                <span className="shrink-0 text-xs text-ink-muted">{field.unit}</span>
               </div>
-              <p className="mt-1 text-[11px] text-slate-500">{field.help}</p>
+              <p className="mt-1 text-[11px] text-ink-subtle">{field.help}</p>
             </div>
           );
         })}
@@ -142,14 +142,14 @@ export default function ThresholdSettings({ onChanged }: ThresholdSettingsProps)
         <button
           onClick={() => save(values)}
           disabled={saving}
-          className="rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-black hover:opacity-90 disabled:opacity-40"
+          className="rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-40"
         >
           {saving ? "Enregistrement…" : "Enregistrer les seuils"}
         </button>
         <button
           onClick={() => save(DEFAULT_THRESHOLDS)}
           disabled={saving}
-          className="flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-xs text-slate-400 hover:text-white disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-xs text-ink-muted hover:text-ink disabled:opacity-40"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           Valeurs par défaut
@@ -168,7 +168,7 @@ export default function ThresholdSettings({ onChanged }: ThresholdSettingsProps)
         </p>
       )}
 
-      <p className="mt-4 flex items-center gap-2 border-t border-surface-overlay pt-3 text-[11px] text-slate-500">
+      <p className="mt-4 flex items-center gap-2 border-t border-surface-overlay pt-3 text-[11px] text-ink-subtle">
         <Database className="h-3.5 w-3.5" />
         Sauvegarde : {STORAGE_LABEL[storage] ?? storage}
       </p>

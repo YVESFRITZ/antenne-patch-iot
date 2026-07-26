@@ -14,12 +14,12 @@ export default function Sidebar({ activeTab, onTabChange, alertCount }: SidebarP
     <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-surface-overlay bg-surface-raised lg:flex">
       <div className="border-b border-surface-overlay p-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 shadow-glow">
-            <Radio className="h-5 w-5 text-accent" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent text-white shadow-glow-lg">
+            <Radio className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-wide text-white">AntennePatch</h1>
-            <p className="text-xs text-slate-400">IoT Supervision</p>
+            <h1 className="text-base font-bold tracking-tight text-ink">AntennePatch</h1>
+            <p className="text-xs text-ink-muted">Supervision IoT</p>
           </div>
         </div>
       </div>
@@ -32,10 +32,10 @@ export default function Sidebar({ activeTab, onTabChange, alertCount }: SidebarP
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${
+              className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-accent/10 text-accent shadow-glow"
-                  : "text-slate-400 hover:bg-surface-overlay hover:text-white"
+                  ? "bg-accent-soft text-accent-dim"
+                  : "text-ink-muted hover:bg-surface-overlay/60 hover:text-ink"
               }`}
             >
               {isActive && (
@@ -55,7 +55,7 @@ export default function Sidebar({ activeTab, onTabChange, alertCount }: SidebarP
 
       <div className="border-t border-surface-overlay p-4">
         <div className="rounded-lg bg-surface-overlay/50 p-3">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2 text-xs text-ink-muted">
             <Activity className="h-3.5 w-3.5 text-status-online" />
             <span>Système opérationnel</span>
           </div>

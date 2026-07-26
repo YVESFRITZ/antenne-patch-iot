@@ -37,7 +37,7 @@ interface MapInteractiveProps {
 /** Fonds de carte libres, sans clé d'API ni facturation. */
 const TILE_LAYERS = {
   plan: {
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom: 20,
@@ -56,7 +56,7 @@ function dotIcon(color: string, size: number, ring = false): L.DivIcon {
     html: `<span style="
       display:block;width:${size}px;height:${size}px;border-radius:9999px;
       background:${color};border:2px solid #ffffff;
-      box-shadow:0 0 0 ${ring ? 4 : 0}px ${color}55, 0 1px 4px rgba(0,0,0,.5);
+      box-shadow:0 0 0 ${ring ? 4 : 0}px ${color}44, 0 1px 4px rgba(15,23,42,.25);
     "></span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -268,7 +268,7 @@ export default function MapInteractive({
           [tx.lat, tx.lng],
           [rx.lat, rx.lng],
         ],
-        { color: "#00d4aa", weight: 3, opacity: 0.9 }
+        { color: "#0d9488", weight: 3, opacity: 0.9 }
       )
         .bindPopup(
           `<strong>${tx.name} → ${rx.name}</strong><br/>` +

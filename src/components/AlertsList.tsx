@@ -20,7 +20,7 @@ export default function AlertsList({ alerts, onAcknowledge }: AlertsListProps) {
 
   if (activeAlerts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-12 text-ink-muted">
         <Bell className="mb-3 h-8 w-8 text-status-online" />
         <p className="text-sm">Aucune alerte active</p>
         <p className="text-xs">Tous les systèmes fonctionnent normalement</p>
@@ -42,14 +42,14 @@ export default function AlertsList({ alerts, onAcknowledge }: AlertsListProps) {
               <Icon className={`h-4 w-4 ${config.color}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white">{alert.message}</p>
-              <p className="mt-0.5 text-xs text-slate-400">
+              <p className="text-sm font-medium text-ink">{alert.message}</p>
+              <p className="mt-0.5 text-xs text-ink-muted">
                 {alert.antennaName} · {alert.siteName} · {formatTime(alert.timestamp)}
               </p>
             </div>
             <button
               onClick={() => onAcknowledge(alert.id)}
-              className="flex items-center gap-1 rounded-lg bg-surface-overlay px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:bg-accent/10 hover:text-accent"
+              className="flex items-center gap-1 rounded-lg bg-surface-overlay px-2.5 py-1.5 text-xs text-ink-muted transition-colors hover:bg-accent/10 hover:text-accent"
             >
               <Check className="h-3 w-3" />
               Acquitter

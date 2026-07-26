@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0e14;
-  --foreground: #e8edf4;
+  --background: #f5f7fa;
+  --foreground: #0f172a;
 }
 
 * {
@@ -30,12 +30,10 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-/* Leaflet removed — Google Maps */
-
-/* Custom scrollbar */
+/* Barre de défilement discrète */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -43,24 +41,24 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #243044;
-  border-radius: 3px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #94a3b8;
 }
 
-/* Antenna marker pulse */
+/* Pulsation des marqueurs d'antenne */
 @keyframes antenna-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(0, 212, 170, 0.5);
+    box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 12px rgba(0, 212, 170, 0);
+    box-shadow: 0 0 0 12px rgba(13, 148, 136, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(0, 212, 170, 0);
+    box-shadow: 0 0 0 0 rgba(13, 148, 136, 0);
   }
 }
 
@@ -68,16 +66,46 @@ body {
   animation: antenna-pulse 2s infinite;
 }
 
-/* Glass effect */
+/* Carte : surface blanche, bordure fine, ombre douce */
 .glass {
-  background: rgba(26, 35, 50, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(36, 48, 68, 0.6);
+  background: #ffffff;
+  border: 1px solid #e8edf4;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.06);
 }
 
-/* Grid background */
+/* Fond de page très légèrement texturé */
 .grid-bg {
-  background-image: linear-gradient(rgba(36, 48, 68, 0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(36, 48, 68, 0.3) 1px, transparent 1px);
-  background-size: 40px 40px;
+  background-color: #f5f7fa;
+  background-image: radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.05) 1px, transparent 0);
+  background-size: 28px 28px;
+}
+
+/* Panneaux flottants au-dessus de la carte */
+.panel {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid #e8edf4;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.10);
+}
+
+/* Leaflet : accorder les fenêtres d'information au reste de l'interface */
+.leaflet-container {
+  font-family: inherit;
+  background: #eef2f7;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #0f172a;
+}
+
+.leaflet-bar a {
+  color: #0f172a;
 }

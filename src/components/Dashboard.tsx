@@ -26,7 +26,7 @@ const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
   loading: () => (
     <div className="flex h-full min-h-[400px] items-center justify-center rounded-xl border border-surface-overlay bg-surface-raised">
-      <div className="flex items-center gap-2 text-slate-400">
+      <div className="flex items-center gap-2 text-ink-muted">
         <RefreshCw className="h-4 w-4 animate-spin" />
         Chargement Google Maps...
       </div>
@@ -107,7 +107,7 @@ export default function Dashboard() {
   const activeAlertCount = alerts.filter((a) => !a.acknowledged).length;
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-[#0a0e14]">
+    <div className="flex h-[100dvh] overflow-hidden bg-surface">
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -115,13 +115,13 @@ export default function Dashboard() {
       />
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between gap-3 border-b border-surface-overlay bg-surface-raised/50 px-4 py-3 sm:px-6 sm:py-4">
+        <header className="flex items-center justify-between gap-3 border-b border-surface-overlay bg-surface-raised px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 shadow-glow lg:hidden">
-              <Radio className="h-5 w-5 text-accent" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent text-white shadow-glow-lg lg:hidden">
+              <Radio className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-            <h2 className="truncate text-base font-bold text-white sm:text-lg">
+            <h2 className="truncate text-lg font-bold tracking-tight text-ink sm:text-xl">
               {activeTab === "dashboard" && "Tableau de bord"}
               {activeTab === "map" && "Carte des sites IoT"}
               {activeTab === "antennas" && "Gestion des antennes"}
@@ -131,7 +131,7 @@ export default function Dashboard() {
               {activeTab === "alerts" && "Centre d'alertes"}
               {activeTab === "settings" && "Paramètres"}
             </h2>
-            <p className="truncate text-xs text-slate-400">
+            <p className="truncate text-xs text-ink-muted">
               Dernière mise à jour : {lastUpdate.toLocaleTimeString("fr-FR")}
             </p>
             </div>
@@ -139,7 +139,7 @@ export default function Dashboard() {
           <button
             onClick={fetchData}
             aria-label="Actualiser"
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent transition-colors hover:bg-accent/20"
+            className="flex shrink-0 items-center gap-2 rounded-xl bg-accent-soft px-3 py-2 text-xs font-medium text-accent-dim transition-colors hover:bg-accent hover:text-white"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Actualiser</span>
@@ -171,13 +171,13 @@ export default function Dashboard() {
                   />
                 ) : (
                   <div className="glass rounded-xl p-6 text-center">
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-ink-muted">
                       Cliquez sur une antenne sur la carte pour voir ses détails
                     </p>
                   </div>
                 )}
                 <div className="glass rounded-xl p-4">
-                  <h3 className="mb-3 text-sm font-semibold text-white">
+                  <h3 className="mb-3 text-sm font-semibold text-ink">
                     Alertes récentes
                   </h3>
                   <AlertsList alerts={alerts.slice(0, 3)} onAcknowledge={handleAcknowledge} />
@@ -204,13 +204,13 @@ export default function Dashboard() {
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               <div>
                 <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
                   <input
                     type="text"
                     placeholder="Rechercher une antenne..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full rounded-xl border border-surface-overlay bg-surface-raised py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none focus:border-accent/50"
+                    className="w-full rounded-xl border border-surface-overlay bg-surface-raised py-2.5 pl-10 pr-4 text-sm text-ink placeholder-ink-subtle outline-none focus:border-accent/50"
                   />
                 </div>
                 <AntennaList
@@ -228,7 +228,7 @@ export default function Dashboard() {
                   />
                 ) : (
                   <div className="glass flex h-64 items-center justify-center rounded-xl">
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-ink-muted">
                       Sélectionnez une antenne pour voir les détails
                     </p>
                   </div>
@@ -272,10 +272,10 @@ export default function Dashboard() {
               <ThresholdSettings onChanged={fetchData} />
 
               <div className="glass rounded-xl p-6">
-                <h3 className="mb-2 text-sm font-semibold text-white">
+                <h3 className="mb-2 text-sm font-semibold text-ink">
                   Historique et export
                 </h3>
-                <p className="mb-4 text-sm text-slate-400">
+                <p className="mb-4 text-sm text-ink-muted">
                   Les mesures sont agrégées par heure et conservées 30 jours.
                   Téléchargez-les au format CSV pour vos rapports (ouvrable dans
                   Excel ou LibreOffice).
@@ -294,20 +294,20 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="glass rounded-xl p-6">
-                <h3 className="mb-4 text-sm font-semibold text-white">
+                <h3 className="mb-4 text-sm font-semibold text-ink">
                   Google Maps — Configuré
                 </h3>
-                <p className="mb-2 text-sm text-slate-400">
+                <p className="mb-2 text-sm text-ink-muted">
                   Carte Google Maps active (projet <span className="font-mono text-accent">ice-tech7</span>).
                   Langue : FR · Région : France · Géolocalisation temps réel.
                 </p>
                 <p className="text-xs text-status-online">● Clé API chargée depuis .env.local</p>
               </div>
               <div className="glass rounded-xl p-6">
-                <h3 className="mb-2 text-sm font-semibold text-white">
+                <h3 className="mb-2 text-sm font-semibold text-ink">
                   Arduino — Connexion directe à l&apos;application
                 </h3>
-                <p className="mb-4 text-sm text-slate-400">
+                <p className="mb-4 text-sm text-ink-muted">
                   Firmware dans <span className="font-mono text-accent">firmware/arduino/</span>.
                   Éditez <span className="font-mono">config.h</span> : votre WiFi et la clé API
                   suffisent, le module se connecte alors directement à cette application.
@@ -323,7 +323,7 @@ export default function Dashboard() {
 #define API_KEY       "votre_cle_api"
 #define ANTENNA_ID    "ant-1"`}
                 </pre>
-                <p className="mt-3 text-xs text-slate-500">
+                <p className="mt-3 text-xs text-ink-subtle">
                   La clé API est stockée côté serveur (variable{" "}
                   <span className="font-mono">ANTENNE_API_KEY</span>) et n&apos;est jamais
                   affichée ici. ESP32 pour l&apos;envoi WiFi/HTTPS, UNO + shield Ethernet
@@ -331,10 +331,10 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="glass rounded-xl p-6">
-                <h3 className="mb-2 text-sm font-semibold text-white">
+                <h3 className="mb-2 text-sm font-semibold text-ink">
                   Module GPS — Position des antennes
                 </h3>
-                <p className="mb-4 text-sm text-slate-400">
+                <p className="mb-4 text-sm text-ink-muted">
                   Branchez un module GPS (NEO-6M) sur l&apos;Arduino : sa position réelle
                   remplace automatiquement les coordonnées de l&apos;antenne sur la carte.
                 </p>
@@ -344,13 +344,13 @@ export default function Dashboard() {
 #define GPS_TX_PIN 17   // ESP32 -> RX du GPS
 #define GPS_BAUD   9600`}
                 </pre>
-                <p className="mt-3 text-xs text-slate-500">
+                <p className="mt-3 text-xs text-ink-subtle">
                   Bibliothèque requise : TinyGPSPlus. Première acquisition en extérieur :
                   1 à 5 minutes.
                 </p>
               </div>
               <div className="glass rounded-xl p-6">
-                <h3 className="mb-4 text-sm font-semibold text-white">
+                <h3 className="mb-4 text-sm font-semibold text-ink">
                   API REST — Envoi de télémétrie
                 </h3>
                 <pre className="overflow-x-auto rounded-lg bg-surface-overlay p-4 font-mono text-xs text-accent">

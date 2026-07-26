@@ -25,7 +25,7 @@ export default function MobileNav({ activeTab, onTabChange, alertCount }: Mobile
               aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
               className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] transition-colors ${
-                isActive ? "text-accent" : "text-slate-400 active:text-white"
+                isActive ? "text-accent" : "text-ink-muted active:text-ink"
               }`}
             >
               <span className="relative">

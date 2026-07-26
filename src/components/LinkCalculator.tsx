@@ -31,7 +31,7 @@ interface LinkCalculatorProps {
 
 const qualityColor: Record<string, string> = {
   excellent: "#22c55e",
-  bon: "#00d4aa",
+  bon: "#0d9488",
   limite: "#f59e0b",
   hors_portee: "#ef4444",
 };
@@ -51,7 +51,7 @@ function AntennaSelect({
 }) {
   return (
     <div className="flex-1">
-      <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-slate-400">
+      <label className="mb-1.5 flex items-center gap-2 text-xs font-medium text-ink-muted">
         {role === "émetteur" ? (
           <Radio className="h-3.5 w-3.5 text-accent" />
         ) : (
@@ -62,7 +62,7 @@ function AntennaSelect({
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-surface-overlay bg-surface-raised px-3 py-2.5 text-sm text-white outline-none focus:border-accent/50"
+        className="w-full rounded-xl border border-surface-overlay bg-surface-raised px-3 py-2.5 text-sm text-ink outline-none focus:border-accent/50"
       >
         <option value="" disabled>
           Sélectionner…
@@ -82,7 +82,7 @@ function ResultCard({
   label,
   value,
   sub,
-  color = "text-white",
+  color = "text-ink",
 }: {
   icon: React.ElementType;
   label: string;
@@ -92,12 +92,12 @@ function ResultCard({
 }) {
   return (
     <div className="rounded-xl border border-surface-overlay bg-surface-overlay/40 p-4">
-      <div className="flex items-center gap-2 text-xs text-slate-400">
+      <div className="flex items-center gap-2 text-xs text-ink-muted">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </div>
       <p className={`mt-1.5 text-2xl font-bold ${color}`}>{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-slate-500">{sub}</p>}
+      {sub && <p className="mt-0.5 text-xs text-ink-subtle">{sub}</p>}
     </div>
   );
 }
@@ -134,11 +134,11 @@ export default function LinkCalculator({
       <div className="glass rounded-xl p-5">
         <div className="mb-1 flex items-center gap-2">
           <Ruler className="h-5 w-5 text-accent" />
-          <h3 className="text-sm font-semibold text-white">
+          <h3 className="text-sm font-semibold text-ink">
             Calcul de liaison émetteur → récepteur
           </h3>
         </div>
-        <p className="mb-4 text-xs text-slate-400">
+        <p className="mb-4 text-xs text-ink-muted">
           Sélectionnez deux modules pour calculer la distance géodésique, l&apos;azimut
           de pointage et le bilan de liaison radio (portée estimée).
         </p>
@@ -152,7 +152,7 @@ export default function LinkCalculator({
             onChange={onTxChange}
           />
           <div className="hidden pb-3 sm:block">
-            <ArrowRight className="h-5 w-5 text-slate-500" />
+            <ArrowRight className="h-5 w-5 text-ink-subtle" />
           </div>
           <AntennaSelect
             label="Module récepteur (RX)"
@@ -189,21 +189,21 @@ export default function LinkCalculator({
                 >
                   {budget.qualityLabel}
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-ink-muted">
                   Marge de liaison estimée :{" "}
-                  <span className="font-mono text-white">
+                  <span className="font-mono text-ink">
                     {budget.linkMarginDb.toFixed(1)} dB
                   </span>
                 </p>
               </div>
             </div>
             <div className="text-right">
-              <p className="font-mono text-xs text-slate-400">
+              <p className="font-mono text-xs text-ink-muted">
                 {tx.name}
                 <span className="mx-1.5 text-accent">→</span>
                 {rx.name}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-ink-subtle">
                 Liaison {tx.type} · {budget.freqMHz} MHz
               </p>
             </div>
@@ -251,8 +251,8 @@ export default function LinkCalculator({
                   className="h-2 w-2 rounded-full"
                   style={{ backgroundColor: statusColor(tx.status) }}
                 />
-                <p className="font-mono text-xs text-white">{tx.name}</p>
-                <p className="text-[10px] text-slate-500">
+                <p className="font-mono text-xs text-ink">{tx.name}</p>
+                <p className="text-[10px] text-ink-subtle">
                   {tx.lat.toFixed(4)}, {tx.lng.toFixed(4)}
                 </p>
               </div>
@@ -280,14 +280,14 @@ export default function LinkCalculator({
                   className="h-2 w-2 rounded-full"
                   style={{ backgroundColor: statusColor(rx.status) }}
                 />
-                <p className="font-mono text-xs text-white">{rx.name}</p>
-                <p className="text-[10px] text-slate-500">
+                <p className="font-mono text-xs text-ink">{rx.name}</p>
+                <p className="text-[10px] text-ink-subtle">
                   {rx.lat.toFixed(4)}, {rx.lng.toFixed(4)}
                 </p>
               </div>
             </div>
 
-            <p className="mt-4 text-center text-[11px] text-slate-500">
+            <p className="mt-4 text-center text-[11px] text-ink-subtle">
               Modèle espace libre (Friis). Les valeurs réelles dépendent du relief,
               des obstacles et des conditions météo.
             </p>
@@ -297,7 +297,7 @@ export default function LinkCalculator({
 
       {!budget && !sameModule && (
         <div className="glass flex h-40 items-center justify-center rounded-xl">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-ink-muted">
             Choisissez un émetteur et un récepteur pour lancer le calcul.
           </p>
         </div>

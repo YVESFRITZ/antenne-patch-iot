@@ -66,15 +66,15 @@ export default function StatsCards({ stats }: StatsCardsProps) {
         return (
           <div
             key={card.key}
-            className="glass animate-fade-in rounded-xl p-4 transition-transform hover:scale-[1.02]"
+            className="glass animate-fade-in rounded-2xl p-4 transition-shadow hover:shadow-card-hover"
           >
-            <div className="flex items-center justify-between">
-              <div className={`rounded-lg p-2 ${card.bg}`}>
-                <Icon className={`h-4 w-4 ${card.color}`} />
-              </div>
+            <div className={`inline-flex rounded-xl p-2 ${card.bg}`}>
+              <Icon className={`h-4 w-4 ${card.color}`} />
             </div>
-            <p className="mt-3 text-2xl font-bold text-white">{card.getValue(stats)}</p>
-            <p className="text-xs text-slate-400">{card.label}</p>
+            <p className="mt-3 text-3xl font-bold tracking-tight text-ink">
+              {card.getValue(stats)}
+            </p>
+            <p className="mt-0.5 text-xs font-medium text-ink-muted">{card.label}</p>
           </div>
         );
       })}
