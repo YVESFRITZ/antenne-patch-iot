@@ -131,8 +131,9 @@ export default function Dashboard() {
               {activeTab === "alerts" && "Centre d'alertes"}
               {activeTab === "settings" && "Paramètres"}
             </h2>
-            <p className="truncate text-xs text-ink-muted">
-              Dernière mise à jour : {lastUpdate.toLocaleTimeString("fr-FR")}
+            <p className="flex items-center gap-1.5 truncate text-xs text-ink-muted">
+              <span className="inline-block h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-status-online" />
+              Mis à jour à {lastUpdate.toLocaleTimeString("fr-FR")}
             </p>
             </div>
           </div>

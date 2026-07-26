@@ -66,10 +66,17 @@ export default function StatsCards({ stats }: StatsCardsProps) {
         return (
           <div
             key={card.key}
-            className="glass animate-fade-in rounded-2xl p-4 transition-shadow hover:shadow-card-hover"
+            className="glass animate-fade-in relative overflow-hidden rounded-2xl p-4 transition-shadow hover:shadow-card-hover"
           >
-            <div className={`inline-flex rounded-xl p-2 ${card.bg}`}>
-              <Icon className={`h-4 w-4 ${card.color}`} />
+            {/* Liseré coloré : identifie la mesure d'un coup d'œil */}
+            <span
+              className={`absolute inset-x-0 top-0 h-1 ${card.bg.replace("/10", "")}`}
+              aria-hidden
+            />
+            <div className="flex items-start justify-between">
+              <div className={`inline-flex rounded-xl p-2 ${card.bg}`}>
+                <Icon className={`h-4 w-4 ${card.color}`} />
+              </div>
             </div>
             <p className="mt-3 text-3xl font-bold tracking-tight text-ink">
               {card.getValue(stats)}

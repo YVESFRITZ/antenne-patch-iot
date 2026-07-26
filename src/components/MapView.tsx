@@ -36,6 +36,40 @@ interface MapViewProps {
 }
 
 
+/** Bouton de bascule de la barre d'outils de la carte. */
+function MapToggle({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+  title,
+  activeClass,
+  last = false,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ElementType;
+  label?: string;
+  title: string;
+  activeClass: string;
+  last?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      aria-pressed={active}
+      className={`flex h-10 items-center gap-1.5 px-3 text-xs font-semibold transition-colors ${
+        last ? "" : "border-r border-surface-overlay"
+      } ${active ? activeClass : "text-ink-muted hover:bg-surface-overlay/50 hover:text-ink"}`}
+    >
+      <Icon className="h-4 w-4" />
+      {label && <span>{label}</span>}
+    </button>
+  );
+}
+
 export default function MapView({
   sites,
   antennas,
@@ -136,68 +170,56 @@ export default function MapView({
         />
       )}
 
-      <div className="absolute right-3 top-3 z-20 flex flex-wrap justify-end gap-2">
-        <button
-          onClick={() => setShowFilters((v) => !v)}
-          aria-label="Filtres"
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-card ${
-            filtersActive
-              ? "bg-accent text-white"
-              : "bg-white/95 text-ink ring-1 ring-surface-overlay hover:bg-white"
-          }`}
-        >
-          <Filter className="h-4 w-4" />
-          {filtersActive ? `${mapAntennas.length}/${allMapAntennas.length}` : "Filtres"}
-        </button>
-        <button
-          onClick={() => setShowReal((v) => !v)}
-          title="Antennes réelles des opérateurs (OpenStreetMap)"
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-card ${
-            showReal
-              ? "bg-purple-500 text-white"
-              : "bg-white/95 text-ink ring-1 ring-surface-overlay hover:bg-white"
-          }`}
-        >
-          <RadioTower className="h-4 w-4" />
-          {showReal ? (realLoading ? "…" : realAntennas.length) : "Réelles"}
-        </button>
-        <button
-          onClick={() => setShowDistances((v) => !v)}
-          title="Distances depuis ma position et repères kilométriques"
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-card ${
-            showDistances
-              ? "bg-blue-600 text-white"
-              : "bg-white/95 text-ink ring-1 ring-surface-overlay hover:bg-white"
-          }`}
-        >
-          <Ruler className="h-4 w-4" />
-          km
-        </button>
-        <button
-          onClick={() => setShowCoverage((v) => !v)}
-          aria-label="Zones de couverture"
-          title="Zones de couverture"
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-card ${
-            showCoverage
-              ? "bg-accent text-white"
-              : "bg-white/95 text-ink ring-1 ring-surface-overlay hover:bg-white"
-          }`}
-        >
-          <Radar className="h-4 w-4" />
-        </button>
+      {/* Barre d'outils : les bascules d'affichage sont regroupées, les
+          actions ponctuelles restent séparées. */}
+      <div className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
+        <div className="panel flex overflow-hidden rounded-xl">
+          <MapToggle
+            active={filtersActive}
+            onClick={() => setShowFilters((v) => !v)}
+            icon={Filter}
+            label={filtersActive ? `${mapAntennas.length}/${allMapAntennas.length}` : undefined}
+            title="Filtrer les antennes"
+            activeClass="bg-accent text-white"
+          />
+          <MapToggle
+            active={showReal}
+            onClick={() => setShowReal((v) => !v)}
+            icon={RadioTower}
+            label={showReal ? (realLoading ? "…" : String(realAntennas.length)) : undefined}
+            title="Antennes des opérateurs (OpenStreetMap)"
+            activeClass="bg-violet-600 text-white"
+          />
+          <MapToggle
+            active={showDistances}
+            onClick={() => setShowDistances((v) => !v)}
+            icon={Ruler}
+            title="Distances et repères kilométriques"
+            activeClass="bg-blue-600 text-white"
+          />
+          <MapToggle
+            active={showCoverage}
+            onClick={() => setShowCoverage((v) => !v)}
+            icon={Radar}
+            title="Zones de couverture estimées"
+            activeClass="bg-accent text-white"
+          />
+          <MapToggle
+            active={tileStyle === "satellite"}
+            onClick={() => setTileStyle(tileStyle === "plan" ? "satellite" : "plan")}
+            icon={Layers}
+            title={tileStyle === "plan" ? "Passer en satellite" : "Passer en plan"}
+            activeClass="bg-ink text-white"
+            last
+          />
+        </div>
+
         <button
           onClick={refresh}
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-card hover:bg-blue-700"
+          title="Recentrer sur ma position"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-card transition-colors hover:bg-blue-700"
         >
-          <Crosshair className="h-4 w-4" />
-          GPS
-        </button>
-        <button
-          onClick={() => setTileStyle(tileStyle === "plan" ? "satellite" : "plan")}
-          className="flex items-center gap-1.5 rounded-lg bg-white/95 px-3 py-2 text-xs font-semibold text-ink ring-1 ring-surface-overlay shadow-card hover:bg-white"
-        >
-          <Layers className="h-4 w-4" />
-          {tileStyle === "plan" ? "Plan" : "Satellite"}
+          <Crosshair className="h-5 w-5" />
         </button>
       </div>
 
