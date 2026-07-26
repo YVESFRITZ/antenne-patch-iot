@@ -27,6 +27,8 @@ const MOVEMENT_THRESHOLD_M = 25;
 // Au-delà de cette ancienneté, on accepte toute nouvelle lecture même
 // moins précise : mieux vaut une position fraîche qu'un point périmé.
 const STALE_FIX_MS = 20000;
+// Intervalle minimal entre deux mises à jour lorsque l'on ne bouge pas.
+const MIN_UPDATE_MS = 5000;
 // Délai avant de tenter un repli IP si aucun point GPS n'est encore arrivé.
 const IP_FALLBACK_MS = 12000;
 
@@ -121,15 +123,23 @@ export function useGeolocation() {
         const prev = lastFix.current;
 
         // Décider si cette lecture doit remplacer la précédente.
+        //
+        // Le GPS émet plusieurs lectures par seconde. Les accepter toutes
+        // ferait vibrer la position et redessiner la carte en continu :
+        // on ne retient donc qu'un vrai déplacement, un gain de précision
+        // significatif, ou un point devenu périmé.
         let accept = true;
         if (prev) {
           const moved = haversineDistance(prev.lat, prev.lng, lat, lng);
           const hasMoved = moved > Math.max(MOVEMENT_THRESHOLD_M, acc);
-          const isMorePrecise = acc <= prev.accuracy;
+          // Un gain marginal (52 m au lieu de 55 m) ne justifie pas une
+          // mise à jour : on exige au moins 30 % de mieux.
+          const isMorePrecise = acc < prev.accuracy * 0.7;
           const isStale = now - prev.at > STALE_FIX_MS;
-          // On garde la lecture si l'utilisateur s'est réellement déplacé,
-          // si elle est plus précise, ou si le point courant est périmé.
-          accept = hasMoved || isMorePrecise || isStale;
+          // Quoi qu'il arrive, on espace les mises à jour immobiles.
+          const tooSoon = now - prev.at < MIN_UPDATE_MS;
+
+          accept = hasMoved || ((isMorePrecise || isStale) && !tooSoon);
         }
 
         if (!accept) return;

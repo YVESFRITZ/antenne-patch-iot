@@ -134,10 +134,29 @@ export default function MapInteractive({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileRef = useRef<L.TileLayer | null>(null);
-  /** Couche unique regroupant tout ce qui est redessiné à chaque mise à jour. */
+  /** Antennes, sites, couverture, liaison : redessinés quand les données changent. */
   const layerRef = useRef<L.LayerGroup | null>(null);
+  /** Position et repères kilométriques : suivent le GPS, séparément. */
+  const userLayerRef = useRef<L.LayerGroup | null>(null);
   /** Évite de recentrer la carte en continu pendant le suivi GPS. */
   const centeredRef = useRef<{ lat: number; lng: number } | null>(null);
+  /**
+   * Position figée servant au calcul des distances affichées sur les
+   * marqueurs. Elle ne bouge qu'au-delà de 50 m : sans cela, la moindre
+   * dérive GPS ferait redessiner toutes les antennes.
+   */
+  const anchorRef = useRef<{ lat: number; lng: number } | null>(null);
+  if (userPosition) {
+    const previous = anchorRef.current;
+    if (
+      !previous ||
+      haversineDistance(previous.lat, previous.lng, userPosition.lat, userPosition.lng) > 50
+    ) {
+      anchorRef.current = { lat: userPosition.lat, lng: userPosition.lng };
+    }
+  }
+  const anchorLat = anchorRef.current?.lat ?? null;
+  const anchorLng = anchorRef.current?.lng ?? null;
 
   // Création de la carte (une seule fois).
   useEffect(() => {
@@ -151,6 +170,7 @@ export default function MapInteractive({
     });
     mapRef.current = map;
     layerRef.current = L.layerGroup().addTo(map);
+    userLayerRef.current = L.layerGroup().addTo(map);
     centeredRef.current = center;
 
     // Leaflet mémorise la taille du conteneur à l'initialisation. Sans ce
@@ -184,20 +204,88 @@ export default function MapInteractive({
     }).addTo(map);
   }, [tileStyle]);
 
-  // Recentrage : uniquement sur un déplacement réel, pour ne pas
-  // reprendre la main pendant que l'utilisateur explore la carte.
+  // Recentrage : uniquement sur un déplacement franc, et en glissant
+  // doucement. Reprendre la vue à chaque lecture GPS empêcherait
+  // l'utilisateur d'explorer la carte.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const previous = centeredRef.current;
     if (
       !previous ||
-      haversineDistance(previous.lat, previous.lng, center.lat, center.lng) > 300
+      haversineDistance(previous.lat, previous.lng, center.lat, center.lng) > 500
     ) {
-      map.setView([center.lat, center.lng], map.getZoom());
-      centeredRef.current = center;
+      map.panTo([center.lat, center.lng], { animate: true, duration: 0.6 });
+      centeredRef.current = { lat: center.lat, lng: center.lng };
     }
   }, [center]);
+
+  /**
+   * Position et repères kilométriques, dans leur propre couche.
+   *
+   * Isoler ce bloc évite de redessiner les dizaines de marqueurs
+   * d'antennes à chaque lecture GPS : c'est ce qui faisait clignoter la
+   * carte pendant le suivi.
+   */
+  useEffect(() => {
+    const layer = userLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!userPosition) return;
+
+    L.marker([userPosition.lat, userPosition.lng], {
+      icon: userIcon(),
+      title: "Ma position",
+      zIndexOffset: 800,
+    })
+      .bindPopup(
+        `<strong>Ma position</strong><br/>${userPosition.lat.toFixed(5)}, ${userPosition.lng.toFixed(5)}` +
+          (userPosition.accuracy ? `<br/>précision ±${Math.round(userPosition.accuracy)} m` : "")
+      )
+      .addTo(layer);
+
+    if (userPosition.accuracy) {
+      L.circle([userPosition.lat, userPosition.lng], {
+        radius: userPosition.accuracy,
+        color: "#2563eb",
+        weight: 1,
+        opacity: 0.45,
+        fillOpacity: 0.07,
+        interactive: false,
+      }).addTo(layer);
+    }
+
+    // Cercles de repère : donnent l'échelle des distances d'un coup d'œil.
+    if (showDistances) {
+      for (const radius of DISTANCE_RINGS) {
+        L.circle([userPosition.lat, userPosition.lng], {
+          radius,
+          color: "#2563eb",
+          weight: 1,
+          opacity: 0.25,
+          dashArray: "5 7",
+          fill: false,
+          interactive: false,
+        }).addTo(layer);
+
+        // Étiquette posée au nord du cercle (1° de latitude ≈ 111,32 km).
+        L.marker([userPosition.lat + radius / 111320, userPosition.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `<span style="
+              display:inline-block;padding:1px 6px;border-radius:9999px;
+              background:rgba(37,99,235,.10);color:#1d4ed8;
+              font-size:10px;font-weight:600;white-space:nowrap;
+            ">${radius / 1000} km</span>`,
+            iconSize: [44, 16],
+            iconAnchor: [22, 8],
+          }),
+          interactive: false,
+          zIndexOffset: -100,
+        }).addTo(layer);
+      }
+    }
+  }, [userPosition, showDistances]);
 
   // Toutes les couches de données, redessinées ensemble.
   useEffect(() => {
@@ -205,61 +293,6 @@ export default function MapInteractive({
     const layer = layerRef.current;
     if (!map || !layer) return;
     layer.clearLayers();
-
-    // -- Position de l'utilisateur --
-    if (userPosition) {
-      L.marker([userPosition.lat, userPosition.lng], {
-        icon: userIcon(),
-        title: "Ma position",
-        zIndexOffset: 800,
-      })
-        .bindPopup(
-          `<strong>Ma position</strong><br/>${userPosition.lat.toFixed(5)}, ${userPosition.lng.toFixed(5)}` +
-            (userPosition.accuracy ? `<br/>précision ±${Math.round(userPosition.accuracy)} m` : "")
-        )
-        .addTo(layer);
-
-      if (userPosition.accuracy) {
-        L.circle([userPosition.lat, userPosition.lng], {
-          radius: userPosition.accuracy,
-          color: "#3b82f6",
-          weight: 1,
-          opacity: 0.5,
-          fillOpacity: 0.08,
-        }).addTo(layer);
-      }
-
-      // Cercles de repère : donnent l'échelle des distances d'un coup d'œil.
-      if (showDistances) {
-        for (const radius of DISTANCE_RINGS) {
-          L.circle([userPosition.lat, userPosition.lng], {
-            radius,
-            color: "#2563eb",
-            weight: 1,
-            opacity: 0.28,
-            dashArray: "5 7",
-            fill: false,
-            interactive: false,
-          }).addTo(layer);
-
-          // Étiquette posée au nord du cercle (1° de latitude ≈ 111,32 km).
-          L.marker([userPosition.lat + radius / 111320, userPosition.lng], {
-            icon: L.divIcon({
-              className: "",
-              html: `<span style="
-                display:inline-block;padding:1px 6px;border-radius:9999px;
-                background:rgba(37,99,235,.10);color:#1d4ed8;
-                font-size:10px;font-weight:600;white-space:nowrap;
-              ">${radius / 1000} km</span>`,
-              iconSize: [44, 16],
-              iconAnchor: [22, 8],
-            }),
-            interactive: false,
-            zIndexOffset: -100,
-          }).addTo(layer);
-        }
-      }
-    }
 
     // -- Sites --
     for (const site of sites) {
@@ -352,10 +385,11 @@ export default function MapInteractive({
     // -- Mes antennes --
     for (const antenna of antennas) {
       const selected = antenna.id === selectedAntennaId;
-      // Distance depuis la position de l'utilisateur, si elle est connue.
-      const distance = userPosition
-        ? haversineDistance(userPosition.lat, userPosition.lng, antenna.lat, antenna.lng)
-        : null;
+      // Distance depuis la position figée, si elle est connue.
+      const distance =
+        anchorLat !== null && anchorLng !== null
+          ? haversineDistance(anchorLat, anchorLng, antenna.lat, antenna.lng)
+          : null;
 
       const marker = L.marker([antenna.lat, antenna.lng], {
         icon: pinIcon(statusColor(antenna.status), "antenna", selected),
@@ -398,8 +432,11 @@ export default function MapInteractive({
         )
         .addTo(layer);
     }
+    // La position brute est volontairement absente des dépendances :
+    // seule la position figée (anchor) intervient ici.
   }, [
-    userPosition,
+    anchorLat,
+    anchorLng,
     sites,
     antennas,
     realAntennas,
