@@ -71,7 +71,9 @@ export default function MapView({
   const [showFilters, setShowFilters] = useState(false);
   /** Antennes réelles des opérateurs (OpenStreetMap), activées par défaut. */
   const [showReal, setShowReal] = useState(true);
-  const [realRadius, setRealRadius] = useState(10000);
+  // 5 km par défaut : au-delà, la requête OpenStreetMap dépasse souvent la
+  // durée maximale d'une fonction serveur et bascule sur le navigateur.
+  const [realRadius, setRealRadius] = useState(5000);
   /** Distances depuis la position et cercles de repère kilométriques. */
   const [showDistances, setShowDistances] = useState(true);
 

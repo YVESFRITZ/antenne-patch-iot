@@ -112,9 +112,10 @@ export async function fetchNearbyAntennas(
           "User-Agent": "AntennePatch/1.0 (supervision IoT)",
           Accept: "application/json",
         },
-        // Les fonctions serveur sans serveur sont limitées en durée :
-        // on échoue vite pour laisser le navigateur reprendre la main.
-        signal: AbortSignal.timeout(8000),
+        // Les fonctions sans serveur sont limitées à une dizaine de
+        // secondes : on abandonne juste avant, pour renvoyer une erreur
+        // exploitable plutôt que de se faire couper net.
+        signal: AbortSignal.timeout(9000),
       });
       if (!res.ok) {
         lastError = new Error(`HTTP ${res.status}`);
