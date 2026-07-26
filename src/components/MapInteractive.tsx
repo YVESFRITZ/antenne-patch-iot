@@ -61,44 +61,54 @@ const TILE_LAYERS = {
   },
 };
 
-/** Glyphes des marqueurs, tracés en SVG pour rester nets à tout zoom. */
+/**
+ * Glyphes dessinés dans un repère 24×24, centré sur (12,12).
+ * Ils sont ensuite replacés dans la tête de l'épingle par une
+ * transformation, ce qui garantit un centrage correct quelle que soit
+ * la taille du marqueur.
+ */
 const GLYPHS = {
-  // Antenne émettrice : mât et ondes.
+  // Antenne émettrice : mât et ondes de part et d'autre.
   antenna:
-    '<path d="M12 8.5v7M9.2 6.4a4 4 0 0 1 5.6 0M6.6 3.9a7.6 7.6 0 0 1 10.8 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>',
-  // Site : bâtiment.
-  site: '<path d="M7 16V9l5-3 5 3v7" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M10.5 16v-3h3v3" fill="none" stroke="#fff" stroke-width="1.5"/>',
-  // Pylône d'opérateur : treillis.
+    '<path d="M12 10v9M8.5 8.5a5 5 0 0 1 7 0M5.5 5.5a9 9 0 0 1 13 0" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>',
+  // Site : bâtiment avec toit.
+  site:
+    '<path d="M5 19V10l7-4.5 7 4.5v9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 19v-4.5h4V19" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
+  // Pylône d'opérateur : mât en treillis.
   tower:
-    '<path d="M9 17l3-11 3 11M9.8 13h4.4M8.9 10.5h6.2" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>',
+    '<path d="M7.5 20l4.5-15 4.5 15M9 15h6M8 11.5h8" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
 /**
- * Épingle SVG avec glyphe. Le tracé est dessiné une fois en chaîne, ce
- * qui évite de créer des éléments DOM lourds pour chaque marqueur.
+ * Épingle SVG avec glyphe centré dans sa tête.
+ *
+ * Le repère est 32×42 : tête circulaire de rayon 13 centrée en (16,16),
+ * pointe à (16,41). Le glyphe 24×24 est ramené à l'échelle 0,72 puis
+ * centré sur la tête.
  */
 function pinIcon(color: string, glyph: keyof typeof GLYPHS, selected = false): L.DivIcon {
-  const w = selected ? 40 : 32;
-  const h = selected ? 52 : 42;
+  const scale = selected ? 1.25 : 1;
+  const w = Math.round(32 * scale);
+  const h = Math.round(42 * scale);
+  const g = 0.72; // échelle du glyphe
+  const offset = 16 - 12 * g; // recentre le repère 24×24 sur (16,16)
+
   const svg = `
-<svg width="${w}" height="${h}" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <filter id="s" x="-50%" y="-30%" width="200%" height="180%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="1.4" flood-color="#0f172a" flood-opacity="0.35"/>
-    </filter>
-  </defs>
-  <path filter="url(#s)"
-        d="M12 31.2C12 31.2 22.4 19.6 22.4 12.4A10.4 10.4 0 1 0 1.6 12.4C1.6 19.6 12 31.2 12 31.2Z"
-        fill="${color}" stroke="#ffffff" stroke-width="1.6"/>
-  ${GLYPHS[glyph]}
+<svg width="${w}" height="${h}" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+  <path d="M16 41C16 41 29 25.5 29 16A13 13 0 1 0 3 16C3 25.5 16 41 16 41Z"
+        fill="rgba(15,23,42,.22)" transform="translate(0,1.5)"/>
+  <path d="M16 41C16 41 29 25.5 29 16A13 13 0 1 0 3 16C3 25.5 16 41 16 41Z"
+        fill="${color}" stroke="#ffffff" stroke-width="2"/>
+  <g transform="translate(${offset},${offset}) scale(${g})">${GLYPHS[glyph]}</g>
 </svg>`;
+
   return L.divIcon({
     className: selected ? "marker-pulse" : "",
     html: svg,
     iconSize: [w, h],
-    // La pointe de l'épingle doit toucher la coordonnée exacte.
+    // La pointe de l'épingle touche la coordonnée exacte.
     iconAnchor: [w / 2, h],
-    popupAnchor: [0, -h + 8],
+    popupAnchor: [0, -h + 10],
   });
 }
 
@@ -173,20 +183,32 @@ export default function MapInteractive({
     userLayerRef.current = L.layerGroup().addTo(map);
     centeredRef.current = center;
 
-    // Leaflet mémorise la taille du conteneur à l'initialisation. Sans ce
-    // recalcul, changer d'onglet, tourner l'écran ou replier la barre
-    // latérale laisse des tuiles décalées ou des zones grises.
-    const observer = new ResizeObserver(() => map.invalidateSize());
+    // Leaflet fige la taille du conteneur à l'initialisation et ne charge
+    // les tuiles que pour cette zone. Si la mise en page s'ajuste ensuite
+    // (arrivée des données, barre latérale, rotation de l'écran), les
+    // tuiles ne couvrent qu'une bande et le reste apparaît blanc.
+    const refresh = () => map.invalidateSize({ animate: false });
+
+    const observer = new ResizeObserver(refresh);
     observer.observe(containerRef.current);
-    // Premier recalcul après la mise en page initiale.
-    const initial = setTimeout(() => map.invalidateSize(), 200);
+    window.addEventListener("resize", refresh);
+    window.addEventListener("orientationchange", refresh);
+
+    // La mise en page se stabilise en plusieurs étapes : on repasse
+    // plusieurs fois plutôt que de parier sur un seul instant.
+    const timers = [0, 150, 400, 900, 1600].map((delay) =>
+      setTimeout(refresh, delay)
+    );
 
     return () => {
       observer.disconnect();
-      clearTimeout(initial);
+      window.removeEventListener("resize", refresh);
+      window.removeEventListener("orientationchange", refresh);
+      timers.forEach(clearTimeout);
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
+      userLayerRef.current = null;
     };
     // Le centre initial ne doit pas recréer la carte : dépendances vides.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -201,7 +223,12 @@ export default function MapInteractive({
     tileRef.current = L.tileLayer(conf.url, {
       attribution: conf.attribution,
       maxZoom: conf.maxZoom,
+      // Charge une couronne de tuiles au-delà du cadre visible : évite
+      // les bords blancs pendant les déplacements.
+      keepBuffer: 3,
     }).addTo(map);
+    // La couche vient d'être posée : s'assurer qu'elle couvre bien tout.
+    map.invalidateSize({ animate: false });
   }, [tileStyle]);
 
   // Recentrage : uniquement sur un déplacement franc, et en glissant
@@ -376,7 +403,7 @@ export default function MapInteractive({
         marker.bindTooltip(distanceLabel(real.distanceMeters), {
           permanent: true,
           direction: "top",
-          offset: [0, -40],
+          offset: [0, -44],
           className: "distance-label distance-label--operator",
         });
       }
@@ -409,7 +436,7 @@ export default function MapInteractive({
         marker.bindTooltip(distanceLabel(distance), {
           permanent: true,
           direction: "top",
-          offset: [0, selected ? -50 : -40],
+          offset: [0, selected ? -54 : -44],
           className: "distance-label",
         });
       }

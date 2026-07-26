@@ -60,7 +60,7 @@ function MapToggle({
       title={title}
       aria-label={title}
       aria-pressed={active}
-      className={`flex h-10 items-center gap-1.5 px-3 text-xs font-semibold transition-colors ${
+      className={`flex h-10 shrink-0 items-center gap-1.5 px-2.5 text-xs font-semibold transition-colors sm:px-3 ${
         last ? "" : "border-r border-surface-overlay"
       } ${active ? activeClass : "text-ink-muted hover:bg-surface-overlay/50 hover:text-ink"}`}
     >
@@ -172,8 +172,8 @@ export default function MapView({
 
       {/* Barre d'outils : les bascules d'affichage sont regroupées, les
           actions ponctuelles restent séparées. */}
-      <div className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
-        <div className="panel flex overflow-hidden rounded-xl">
+      <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-2 sm:right-3 sm:top-3">
+        <div className="panel flex max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl">
           <MapToggle
             active={filtersActive}
             onClick={() => setShowFilters((v) => !v)}
@@ -223,8 +223,9 @@ export default function MapView({
         </button>
       </div>
 
-      {/* Légende : distingue les trois natures de marqueurs */}
-      <div className="panel absolute left-3 top-3 z-20 hidden rounded-xl px-3 py-2 sm:block">
+      {/* Légende : posée en bas à gauche, le coin haut-gauche étant
+          occupé par les commandes de zoom de Leaflet. */}
+      <div className="panel absolute bottom-24 left-3 z-20 hidden rounded-xl px-3 py-2 lg:block">
         <ul className="space-y-1 text-[11px] text-ink-muted">
           <li className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
@@ -235,14 +236,16 @@ export default function MapView({
             Mes antennes
           </li>
           <li className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
+            <span className="h-2.5 w-2.5 rounded-full bg-violet-600" />
             Antennes opérateurs
           </li>
         </ul>
       </div>
 
+      {/* Panneau de filtres : ouvert sous la barre d'outils, à droite —
+          les commandes de zoom de Leaflet occupent le coin haut-gauche. */}
       {showFilters && (
-        <div className="panel absolute left-3 right-3 top-3 z-30 rounded-xl p-3 sm:right-auto sm:w-72">
+        <div className="panel absolute inset-x-3 top-16 z-30 rounded-xl p-3 sm:left-auto sm:right-3 sm:w-72">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold text-ink">Filtrer les antennes</span>
             <button
@@ -314,20 +317,22 @@ export default function MapView({
       )}
 
       <div className="absolute bottom-3 left-3 right-3 z-20">
-        <div className="panel rounded-lg px-3 py-2 text-xs text-ink-muted">
+        <div className="panel rounded-xl px-3 py-2 text-[11px] text-ink-muted sm:text-xs">
           {userPosition ? (
             <span>
-              <span className="text-blue-400">●</span>{" "}
+              <span className="text-blue-600">●</span>{" "}
               <span className="font-mono text-ink">
                 {userPosition.lat.toFixed(4)}, {userPosition.lng.toFixed(4)}
               </span>
               {" "}({userPosition.source === "gps" ? "GPS" : userPosition.source === "ip" ? "IP" : "défaut"}
               {userPosition.accuracy ? ` ±${Math.round(userPosition.accuracy)} m` : ""})
               {tracking && userPosition.source === "gps" && (
-                <span className="ml-1.5 text-status-online">● suivi temps réel</span>
+                <span className="ml-1.5 hidden text-status-online sm:inline">
+                  ● suivi temps réel
+                </span>
               )}
               {" · "}
-              <span className="text-accent">{mapAntennas.length}</span> mes antennes
+              <span className="text-accent">{mapAntennas.length}</span> antennes
               {showReal && (
                 <>
                   {" · "}
@@ -349,7 +354,7 @@ export default function MapView({
             const scan = scans.find((s) => s.antennaId === selectedAntennaId);
             if (!scan) return null;
             return (
-              <div className="panel mt-2 rounded-lg px-3 py-2 text-[11px] text-ink-muted">
+              <div className="panel mt-2 hidden rounded-xl px-3 py-2 text-[11px] text-ink-muted sm:block">
                 <span className="text-status-online">◎</span>{" "}
                 <span className="text-ink">{scan.networks.length}</span> antennes captées
                 par ce module — cercles = distance estimée depuis la puissance reçue
@@ -365,8 +370,8 @@ export default function MapView({
           })()}
 
         {showReal && realAntennas.length > 0 && (
-          <div className="panel mt-2 rounded-lg px-3 py-2 text-[11px] text-ink-muted">
-            <span className="text-purple-400">◆</span> Antennes des opérateurs
+          <div className="panel mt-2 hidden rounded-xl px-3 py-2 text-[11px] text-ink-muted sm:block">
+            <span className="text-violet-600">◆</span> Antennes des opérateurs
             (OpenStreetMap) — la plus proche à{" "}
             <span className="font-mono text-ink">
               {realAntennas[0].distanceMeters < 1000
