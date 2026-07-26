@@ -32,6 +32,18 @@ interface MapInteractiveProps {
   scans?: ScanResult[];
   /** Fond de carte : plan ou vue satellite. */
   tileStyle?: "plan" | "satellite";
+  /** Affiche les distances depuis la position et les cercles de repère. */
+  showDistances?: boolean;
+}
+
+/** Cercles de repère kilométriques tracés autour de la position. */
+const DISTANCE_RINGS = [1000, 5000, 10000, 25000];
+
+/** Étiquette de distance attachée à un marqueur. */
+function distanceLabel(meters: number): string {
+  return meters < 1000
+    ? `${Math.round(meters)} m`
+    : `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0)} km`;
 }
 
 /** Fonds de carte libres, sans clé d'API ni facturation. */
@@ -117,6 +129,7 @@ export default function MapInteractive({
   realAntennas = [],
   scans = [],
   tileStyle = "plan",
+  showDistances = true,
 }: MapInteractiveProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -215,6 +228,37 @@ export default function MapInteractive({
           fillOpacity: 0.08,
         }).addTo(layer);
       }
+
+      // Cercles de repère : donnent l'échelle des distances d'un coup d'œil.
+      if (showDistances) {
+        for (const radius of DISTANCE_RINGS) {
+          L.circle([userPosition.lat, userPosition.lng], {
+            radius,
+            color: "#2563eb",
+            weight: 1,
+            opacity: 0.28,
+            dashArray: "5 7",
+            fill: false,
+            interactive: false,
+          }).addTo(layer);
+
+          // Étiquette posée au nord du cercle (1° de latitude ≈ 111,32 km).
+          L.marker([userPosition.lat + radius / 111320, userPosition.lng], {
+            icon: L.divIcon({
+              className: "",
+              html: `<span style="
+                display:inline-block;padding:1px 6px;border-radius:9999px;
+                background:rgba(37,99,235,.10);color:#1d4ed8;
+                font-size:10px;font-weight:600;white-space:nowrap;
+              ">${radius / 1000} km</span>`,
+              iconSize: [44, 16],
+              iconAnchor: [22, 8],
+            }),
+            interactive: false,
+            zIndexOffset: -100,
+          }).addTo(layer);
+        }
+      }
     }
 
     // -- Sites --
@@ -277,7 +321,7 @@ export default function MapInteractive({
 
     // -- Antennes réelles des opérateurs (OpenStreetMap) --
     for (const real of realAntennas) {
-      L.marker([real.lat, real.lng], {
+      const marker = L.marker([real.lat, real.lng], {
         icon: pinIcon("#8b5cf6", "tower"),
         title: real.name ?? real.operator ?? "Antenne opérateur",
         zIndexOffset: 100,
@@ -294,12 +338,26 @@ export default function MapInteractive({
             `<br/><em style="color:#64748b">Source : OpenStreetMap — non supervisée</em>`
         )
         .addTo(layer);
+
+      if (showDistances) {
+        marker.bindTooltip(distanceLabel(real.distanceMeters), {
+          permanent: true,
+          direction: "top",
+          offset: [0, -40],
+          className: "distance-label distance-label--operator",
+        });
+      }
     }
 
     // -- Mes antennes --
     for (const antenna of antennas) {
       const selected = antenna.id === selectedAntennaId;
-      L.marker([antenna.lat, antenna.lng], {
+      // Distance depuis la position de l'utilisateur, si elle est connue.
+      const distance = userPosition
+        ? haversineDistance(userPosition.lat, userPosition.lng, antenna.lat, antenna.lng)
+        : null;
+
+      const marker = L.marker([antenna.lat, antenna.lng], {
         icon: pinIcon(statusColor(antenna.status), "antenna", selected),
         title: antenna.name,
         zIndexOffset: selected ? 700 : 500,
@@ -308,9 +366,19 @@ export default function MapInteractive({
         .bindPopup(
           `<strong>${antenna.name}</strong><br/>${antenna.type} · ` +
             `<span style="color:${statusColor(antenna.status)}">${statusLabel(antenna.status)}</span>` +
-            `<br/>Signal ${antenna.signalStrength}% · Batterie ${Math.round(antenna.battery)}%`
+            `<br/>Signal ${antenna.signalStrength}% · Batterie ${Math.round(antenna.battery)}%` +
+            (distance !== null ? `<br/>À ${formatDistance(distance)} de vous` : "")
         )
         .addTo(layer);
+
+      if (showDistances && distance !== null) {
+        marker.bindTooltip(distanceLabel(distance), {
+          permanent: true,
+          direction: "top",
+          offset: [0, selected ? -50 : -40],
+          className: "distance-label",
+        });
+      }
     }
 
     // -- Liaison émetteur → récepteur --
@@ -340,6 +408,7 @@ export default function MapInteractive({
     linkTxId,
     linkRxId,
     showCoverage,
+    showDistances,
     onSelectAntenna,
   ]);
 

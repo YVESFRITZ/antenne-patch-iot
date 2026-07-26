@@ -9,11 +9,12 @@ import {
   Navigation,
   Radar,
   RadioTower,
+  Ruler,
   Search,
   X,
 } from "lucide-react";
 import type { Antenna, AntennaStatus, ScanResult, Site } from "@/lib/types";
-import { statusColor, statusLabel } from "@/lib/utils";
+import { formatDistance, haversineDistance, statusColor, statusLabel } from "@/lib/utils";
 import { DEFAULT_CENTER } from "@/lib/mapStyles";
 import { MAP_DEFAULTS } from "@/lib/mapConfig";
 import { useGeolocation } from "@/hooks/useGeolocation";
@@ -71,6 +72,8 @@ export default function MapView({
   /** Antennes réelles des opérateurs (OpenStreetMap), activées par défaut. */
   const [showReal, setShowReal] = useState(true);
   const [realRadius, setRealRadius] = useState(10000);
+  /** Distances depuis la position et cercles de repère kilométriques. */
+  const [showDistances, setShowDistances] = useState(true);
 
   const {
     antennas: realAntennas,
@@ -91,6 +94,18 @@ export default function MapView({
 
   const filtersActive =
     statusFilter !== "all" || typeFilter !== "all" || search.trim().length > 0;
+
+  // Antennes triées de la plus proche à la plus éloignée de la position.
+  const antennasByDistance = useMemo(() => {
+    const withDistance = mapAntennas.map((a) => ({
+      ...a,
+      distance: userPosition
+        ? haversineDistance(userPosition.lat, userPosition.lng, a.lat, a.lng)
+        : null,
+    }));
+    if (!userPosition) return withDistance;
+    return withDistance.sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+  }, [mapAntennas, userPosition]);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-2xl border border-surface-overlay shadow-card">
@@ -115,6 +130,7 @@ export default function MapView({
           realAntennas={showReal ? realAntennas : []}
           scans={scans}
           tileStyle={tileStyle}
+          showDistances={showDistances}
         />
       )}
 
@@ -142,6 +158,18 @@ export default function MapView({
         >
           <RadioTower className="h-4 w-4" />
           {showReal ? (realLoading ? "…" : realAntennas.length) : "Réelles"}
+        </button>
+        <button
+          onClick={() => setShowDistances((v) => !v)}
+          title="Distances depuis ma position et repères kilométriques"
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-card ${
+            showDistances
+              ? "bg-blue-600 text-white"
+              : "bg-white/95 text-ink ring-1 ring-surface-overlay hover:bg-white"
+          }`}
+        >
+          <Ruler className="h-4 w-4" />
+          km
         </button>
         <button
           onClick={() => setShowCoverage((v) => !v)}
@@ -337,18 +365,23 @@ export default function MapView({
         )}
         {mapAntennas.length > 0 && (
           <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
-            {mapAntennas.slice(0, 6).map((a) => (
+            {antennasByDistance.slice(0, 6).map((a) => (
               <button
                 key={a.id}
                 onClick={() => onSelectAntenna(a.id)}
                 className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-mono transition ${
                   selectedAntennaId === a.id
                     ? "bg-accent text-white"
-                    : "bg-surface-overlay text-ink-muted hover:bg-surface-overlay/80"
+                    : "bg-white/95 text-ink ring-1 ring-surface-overlay hover:bg-white"
                 }`}
                 style={{ borderLeft: `3px solid ${statusColor(a.status)}` }}
               >
-                {a.name} · {statusLabel(a.status)}
+                {a.name}
+                {a.distance !== null && (
+                  <span className="ml-1.5 font-sans font-semibold text-blue-600">
+                    {formatDistance(a.distance)}
+                  </span>
+                )}
               </button>
             ))}
           </div>

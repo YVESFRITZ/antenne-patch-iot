@@ -109,3 +109,26 @@ body {
 .leaflet-bar a {
   color: #0f172a;
 }
+
+/* Étiquettes de distance affichées au-dessus des marqueurs */
+.leaflet-tooltip.distance-label {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e8edf4;
+  border-radius: 9999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+  white-space: nowrap;
+}
+
+/* La flèche par défaut alourdit l'affichage quand les marqueurs sont serrés */
+.leaflet-tooltip.distance-label::before {
+  display: none;
+}
+
+.leaflet-tooltip.distance-label--operator {
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
