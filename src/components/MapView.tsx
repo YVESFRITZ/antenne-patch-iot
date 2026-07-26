@@ -1,27 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useMemo, useState } from "react";
 import {
   Crosshair,
   Filter,
   Layers,
-  MapPin,
   Navigation,
   Radar,
   RadioTower,
   Search,
   X,
 } from "lucide-react";
-import { haversineDistance } from "@/lib/utils";
 import type { Antenna, AntennaStatus, ScanResult, Site } from "@/lib/types";
 import { statusColor, statusLabel } from "@/lib/utils";
 import { DEFAULT_CENTER } from "@/lib/mapStyles";
-import { GOOGLE_MAPS_CONFIG, MAP_DEFAULTS } from "@/lib/googleMapsConfig";
+import { MAP_DEFAULTS } from "@/lib/googleMapsConfig";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useNearbyAntennas } from "@/hooks/useNearbyAntennas";
-import GoogleMapsEmbed from "./GoogleMapsEmbed";
-import MapInteractive from "./MapInteractive";
-import OsmEmbed from "./OsmEmbed";
+
+// Leaflet manipule directement le DOM : la carte ne doit pas être rendue
+// côté serveur.
+const MapInteractive = dynamic(() => import("./MapInteractive"), { ssr: false });
 
 interface MapViewProps {
   sites: Site[];
@@ -45,7 +45,6 @@ export default function MapView({
   linkRxId = null,
   scans = [],
 }: MapViewProps) {
-  const apiKey = GOOGLE_MAPS_CONFIG.apiKey;
   const {
     position: userPosition,
     loading: geoLoading,
@@ -53,28 +52,10 @@ export default function MapView({
     tracking,
     refresh,
   } = useGeolocation();
-  // Carte Google interactive par défaut : c'est le seul mode capable
-  // d'afficher les marqueurs d'antennes. Les modes en iframe (OSM, Embed)
-  // ne montrent que la position. Repli automatique si Google ne charge pas.
-  const [mode, setMode] = useState<"google" | "osm" | "interactive">("google");
+  /** Fond de carte : plan sombre ou vue satellite. */
+  const [tileStyle, setTileStyle] = useState<"plan" | "satellite">("plan");
 
   const center = useMemo(() => userPosition ?? DEFAULT_CENTER, [userPosition]);
-
-  // Les cartes en iframe (OSM / Embed) rechargent la page à chaque changement
-  // de coordonnées : on ne les recentre qu'au-delà d'un vrai déplacement,
-  // sinon le suivi temps réel ferait clignoter la carte en permanence.
-  const embedCenterRef = useRef(center);
-  const lastEmbed = embedCenterRef.current;
-  if (haversineDistance(lastEmbed.lat, lastEmbed.lng, center.lat, center.lng) > 150) {
-    embedCenterRef.current = center;
-  }
-  const embedCenter = embedCenterRef.current;
-
-  // Le tracé de liaison n'est visible que sur la carte Google interactive :
-  // on bascule automatiquement quand une liaison TX→RX est sélectionnée.
-  useEffect(() => {
-    if (linkTxId && linkRxId) setMode("google");
-  }, [linkTxId, linkRxId]);
 
   // Les antennes sont affichées à leurs coordonnées réelles. Aucun
   // repositionnement artificiel : une antenne enregistrée à Lyon reste à
@@ -112,18 +93,6 @@ export default function MapView({
   const filtersActive =
     statusFilter !== "all" || typeFilter !== "all" || search.trim().length > 0;
 
-  if (!apiKey) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center rounded-xl border border-surface-overlay bg-surface-raised p-6 text-center"
-        style={{ height: MAP_HEIGHT }}
-      >
-        <MapPin className="mb-3 h-10 w-10 text-accent" />
-        <p className="text-sm font-medium text-white">Clé Google Maps manquante</p>
-      </div>
-    );
-  }
-
   return (
     <div className="relative overflow-hidden rounded-xl border border-surface-overlay" style={{ height: MAP_HEIGHT }}>
       {geoLoading ? (
@@ -133,7 +102,7 @@ export default function MapView({
             Recherche de votre position...
           </div>
         </div>
-      ) : mode === "google" ? (
+      ) : (
         <MapInteractive
           center={center}
           userPosition={userPosition}
@@ -146,12 +115,8 @@ export default function MapView({
           showCoverage={showCoverage}
           realAntennas={showReal ? realAntennas : []}
           scans={scans}
-          onFallback={() => setMode("osm")}
+          tileStyle={tileStyle}
         />
-      ) : mode === "osm" ? (
-        <OsmEmbed lat={embedCenter.lat} lng={embedCenter.lng} zoom={MAP_DEFAULTS.zoom} />
-      ) : (
-        <GoogleMapsEmbed lat={embedCenter.lat} lng={embedCenter.lng} zoom={MAP_DEFAULTS.zoom} />
       )}
 
       <div className="absolute right-3 top-3 z-20 flex flex-wrap justify-end gap-2">
@@ -199,14 +164,11 @@ export default function MapView({
           GPS
         </button>
         <button
-          onClick={() => {
-            const next = mode === "google" ? "osm" : mode === "osm" ? "interactive" : "google";
-            setMode(next);
-          }}
+          onClick={() => setTileStyle(tileStyle === "plan" ? "satellite" : "plan")}
           className="flex items-center gap-1.5 rounded-lg bg-surface-overlay/90 px-3 py-2 text-xs font-medium text-white shadow-lg hover:bg-surface-overlay"
         >
           <Layers className="h-4 w-4" />
-          {mode === "google" ? "Google Maps" : mode === "osm" ? "OpenStreetMap" : "Embed"}
+          {tileStyle === "plan" ? "Plan" : "Satellite"}
         </button>
       </div>
 
