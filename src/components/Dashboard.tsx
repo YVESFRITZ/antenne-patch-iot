@@ -151,7 +151,7 @@ export default function Dashboard() {
 
           {activeTab === "dashboard" && (
             <div className="mt-4 grid gap-4 lg:grid-cols-3">
-              <div className="lg:col-span-2 h-[500px]">
+              <div className="h-[320px] sm:h-[420px] lg:col-span-2 lg:h-[560px]">
                 <MapView
                   sites={sites}
                   antennas={antennas}
@@ -187,7 +187,7 @@ export default function Dashboard() {
           )}
 
           {activeTab === "map" && (
-            <div className="mt-4 h-[500px]">
+            <div className="mt-4 h-[calc(100dvh-260px)] min-h-[340px]">
               <MapView
                 sites={sites}
                 antennas={antennas}

@@ -15,7 +15,7 @@ import {
 import type { Antenna, AntennaStatus, ScanResult, Site } from "@/lib/types";
 import { statusColor, statusLabel } from "@/lib/utils";
 import { DEFAULT_CENTER } from "@/lib/mapStyles";
-import { MAP_DEFAULTS } from "@/lib/googleMapsConfig";
+import { MAP_DEFAULTS } from "@/lib/mapConfig";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useNearbyAntennas } from "@/hooks/useNearbyAntennas";
 
@@ -34,7 +34,6 @@ interface MapViewProps {
   scans?: ScanResult[];
 }
 
-const MAP_HEIGHT = MAP_DEFAULTS.minHeight;
 
 export default function MapView({
   sites,
@@ -94,7 +93,7 @@ export default function MapView({
     statusFilter !== "all" || typeFilter !== "all" || search.trim().length > 0;
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-surface-overlay" style={{ height: MAP_HEIGHT }}>
+    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-surface-overlay shadow-card">
       {geoLoading ? (
         <div className="flex h-full items-center justify-center bg-surface-raised">
           <div className="flex items-center gap-2 text-ink-muted">
@@ -123,10 +122,10 @@ export default function MapView({
         <button
           onClick={() => setShowFilters((v) => !v)}
           aria-label="Filtres"
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium shadow-lg ${
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-card ${
             filtersActive
               ? "bg-accent text-white"
-              : "bg-surface-overlay/90 text-ink hover:bg-surface-overlay"
+              : "bg-white/95 text-ink ring-1 ring-surface-overlay hover:bg-white"
           }`}
         >
           <Filter className="h-4 w-4" />
@@ -135,10 +134,10 @@ export default function MapView({
         <button
           onClick={() => setShowReal((v) => !v)}
           title="Antennes réelles des opérateurs (OpenStreetMap)"
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium shadow-lg ${
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-card ${
             showReal
               ? "bg-purple-500 text-white"
-              : "bg-surface-overlay/90 text-ink hover:bg-surface-overlay"
+              : "bg-white/95 text-ink ring-1 ring-surface-overlay hover:bg-white"
           }`}
         >
           <RadioTower className="h-4 w-4" />
@@ -148,28 +147,46 @@ export default function MapView({
           onClick={() => setShowCoverage((v) => !v)}
           aria-label="Zones de couverture"
           title="Zones de couverture"
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium shadow-lg ${
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-card ${
             showCoverage
               ? "bg-accent text-white"
-              : "bg-surface-overlay/90 text-ink hover:bg-surface-overlay"
+              : "bg-white/95 text-ink ring-1 ring-surface-overlay hover:bg-white"
           }`}
         >
           <Radar className="h-4 w-4" />
         </button>
         <button
           onClick={refresh}
-          className="flex items-center gap-1.5 rounded-lg bg-blue-500 px-3 py-2 text-xs font-medium text-white shadow-lg hover:bg-blue-600"
+          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white shadow-card hover:bg-blue-700"
         >
           <Crosshair className="h-4 w-4" />
           GPS
         </button>
         <button
           onClick={() => setTileStyle(tileStyle === "plan" ? "satellite" : "plan")}
-          className="flex items-center gap-1.5 rounded-lg bg-surface-overlay/90 px-3 py-2 text-xs font-medium text-ink shadow-lg hover:bg-surface-overlay"
+          className="flex items-center gap-1.5 rounded-lg bg-white/95 px-3 py-2 text-xs font-semibold text-ink ring-1 ring-surface-overlay shadow-card hover:bg-white"
         >
           <Layers className="h-4 w-4" />
           {tileStyle === "plan" ? "Plan" : "Satellite"}
         </button>
+      </div>
+
+      {/* Légende : distingue les trois natures de marqueurs */}
+      <div className="panel absolute left-3 top-3 z-20 hidden rounded-xl px-3 py-2 sm:block">
+        <ul className="space-y-1 text-[11px] text-ink-muted">
+          <li className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+            Ma position
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-accent" />
+            Mes antennes
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
+            Antennes opérateurs
+          </li>
+        </ul>
       </div>
 
       {showFilters && (

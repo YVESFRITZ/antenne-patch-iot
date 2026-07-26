@@ -13,7 +13,7 @@ import {
   statusColor,
   statusLabel,
 } from "@/lib/utils";
-import { MAP_DEFAULTS } from "@/lib/googleMapsConfig";
+import { MAP_DEFAULTS } from "@/lib/mapConfig";
 import type { GeoPosition } from "@/hooks/useGeolocation";
 
 interface MapInteractiveProps {
@@ -49,17 +49,58 @@ const TILE_LAYERS = {
   },
 };
 
-/** Pastille colorée utilisée pour les marqueurs. */
-function dotIcon(color: string, size: number, ring = false): L.DivIcon {
+/** Glyphes des marqueurs, tracés en SVG pour rester nets à tout zoom. */
+const GLYPHS = {
+  // Antenne émettrice : mât et ondes.
+  antenna:
+    '<path d="M12 8.5v7M9.2 6.4a4 4 0 0 1 5.6 0M6.6 3.9a7.6 7.6 0 0 1 10.8 0" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>',
+  // Site : bâtiment.
+  site: '<path d="M7 16V9l5-3 5 3v7" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M10.5 16v-3h3v3" fill="none" stroke="#fff" stroke-width="1.5"/>',
+  // Pylône d'opérateur : treillis.
+  tower:
+    '<path d="M9 17l3-11 3 11M9.8 13h4.4M8.9 10.5h6.2" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>',
+};
+
+/**
+ * Épingle SVG avec glyphe. Le tracé est dessiné une fois en chaîne, ce
+ * qui évite de créer des éléments DOM lourds pour chaque marqueur.
+ */
+function pinIcon(color: string, glyph: keyof typeof GLYPHS, selected = false): L.DivIcon {
+  const w = selected ? 40 : 32;
+  const h = selected ? 52 : 42;
+  const svg = `
+<svg width="${w}" height="${h}" viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="s" x="-50%" y="-30%" width="200%" height="180%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.4" flood-color="#0f172a" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <path filter="url(#s)"
+        d="M12 31.2C12 31.2 22.4 19.6 22.4 12.4A10.4 10.4 0 1 0 1.6 12.4C1.6 19.6 12 31.2 12 31.2Z"
+        fill="${color}" stroke="#ffffff" stroke-width="1.6"/>
+  ${GLYPHS[glyph]}
+</svg>`;
+  return L.divIcon({
+    className: selected ? "marker-pulse" : "",
+    html: svg,
+    iconSize: [w, h],
+    // La pointe de l'épingle doit toucher la coordonnée exacte.
+    iconAnchor: [w / 2, h],
+    popupAnchor: [0, -h + 8],
+  });
+}
+
+/** Point simple, pour la position de l'utilisateur. */
+function userIcon(): L.DivIcon {
   return L.divIcon({
     className: "",
     html: `<span style="
-      display:block;width:${size}px;height:${size}px;border-radius:9999px;
-      background:${color};border:2px solid #ffffff;
-      box-shadow:0 0 0 ${ring ? 4 : 0}px ${color}44, 0 1px 4px rgba(15,23,42,.25);
+      display:block;width:16px;height:16px;border-radius:9999px;
+      background:#2563eb;border:3px solid #ffffff;
+      box-shadow:0 0 0 5px rgba(37,99,235,.20), 0 2px 6px rgba(15,23,42,.35);
     "></span>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
   });
 }
 
@@ -99,7 +140,17 @@ export default function MapInteractive({
     layerRef.current = L.layerGroup().addTo(map);
     centeredRef.current = center;
 
+    // Leaflet mémorise la taille du conteneur à l'initialisation. Sans ce
+    // recalcul, changer d'onglet, tourner l'écran ou replier la barre
+    // latérale laisse des tuiles décalées ou des zones grises.
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(containerRef.current);
+    // Premier recalcul après la mise en page initiale.
+    const initial = setTimeout(() => map.invalidateSize(), 200);
+
     return () => {
+      observer.disconnect();
+      clearTimeout(initial);
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
@@ -145,8 +196,9 @@ export default function MapInteractive({
     // -- Position de l'utilisateur --
     if (userPosition) {
       L.marker([userPosition.lat, userPosition.lng], {
-        icon: dotIcon("#3b82f6", 14, true),
+        icon: userIcon(),
         title: "Ma position",
+        zIndexOffset: 800,
       })
         .bindPopup(
           `<strong>Ma position</strong><br/>${userPosition.lat.toFixed(5)}, ${userPosition.lng.toFixed(5)}` +
@@ -168,8 +220,9 @@ export default function MapInteractive({
     // -- Sites --
     for (const site of sites) {
       L.marker([site.lat, site.lng], {
-        icon: dotIcon(statusColor(site.status), 10),
+        icon: pinIcon(statusColor(site.status), "site"),
         title: site.name,
+        zIndexOffset: 200,
       })
         .bindPopup(
           `<strong>${site.name}</strong><br/>${site.address || ""}<br/>` +
@@ -225,8 +278,9 @@ export default function MapInteractive({
     // -- Antennes réelles des opérateurs (OpenStreetMap) --
     for (const real of realAntennas) {
       L.marker([real.lat, real.lng], {
-        icon: dotIcon("#a855f7", 9),
+        icon: pinIcon("#8b5cf6", "tower"),
         title: real.name ?? real.operator ?? "Antenne opérateur",
+        zIndexOffset: 100,
       })
         .bindPopup(
           `<strong>${real.name ?? real.operator ?? "Antenne opérateur"}</strong><br/>` +
@@ -246,9 +300,9 @@ export default function MapInteractive({
     for (const antenna of antennas) {
       const selected = antenna.id === selectedAntennaId;
       L.marker([antenna.lat, antenna.lng], {
-        icon: dotIcon(statusColor(antenna.status), selected ? 16 : 12, selected),
+        icon: pinIcon(statusColor(antenna.status), "antenna", selected),
         title: antenna.name,
-        zIndexOffset: 500,
+        zIndexOffset: selected ? 700 : 500,
       })
         .on("click", () => onSelectAntenna(antenna.id))
         .bindPopup(
@@ -290,9 +344,7 @@ export default function MapInteractive({
   ]);
 
   return (
-    <div
-      ref={containerRef}
-      style={{ width: "100%", height: MAP_DEFAULTS.minHeight, background: "#0f1419" }}
-    />
+    // La carte remplit son conteneur : c'est le parent qui fixe la hauteur.
+    <div ref={containerRef} className="h-full w-full" style={{ background: "#eef2f7" }} />
   );
 }
