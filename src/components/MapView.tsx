@@ -20,7 +20,7 @@ import { DEFAULT_CENTER } from "@/lib/mapStyles";
 import { MAP_DEFAULTS } from "@/lib/mapConfig";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useNearbyAntennas } from "@/hooks/useNearbyAntennas";
-import { formatDuration, useRoute, type TravelMode } from "@/hooks/useRoute";
+import { formatDuration, useRoute } from "@/hooks/useRoute";
 
 // Leaflet manipule directement le DOM : la carte ne doit pas être rendue
 // côté serveur.
@@ -114,7 +114,6 @@ export default function MapView({
   const [showDistances, setShowDistances] = useState(true);
   /** Itinéraire routier entre l'émetteur et le récepteur sélectionnés. */
   const [showRoute, setShowRoute] = useState(true);
-  const [travelMode, setTravelMode] = useState<TravelMode>("driving");
 
   const linkTx = antennas.find((a) => a.id === linkTxId) ?? null;
   const linkRx = antennas.find((a) => a.id === linkRxId) ?? null;
@@ -127,7 +126,9 @@ export default function MapView({
   } = useRoute(
     hasLink ? { lat: linkTx!.lat, lng: linkTx!.lng } : null,
     hasLink ? { lat: linkRx!.lat, lng: linkRx!.lng } : null,
-    travelMode,
+    // Le serveur public d'OSRM n'héberge que le profil routier ; proposer
+    // un mode piéton donnerait exactement le même tracé.
+    "driving",
     showRoute && hasLink
   );
 
@@ -375,21 +376,11 @@ export default function MapView({
                 <span className="text-status-warning">{routeError}</span>
               )}
 
-              <div className="ml-auto flex gap-1">
-                {(["driving", "walking"] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setTravelMode(m)}
-                    className={`rounded-full px-2.5 py-1 text-[11px] transition-colors ${
-                      travelMode === m
-                        ? "bg-blue-600 text-white"
-                        : "bg-surface-overlay text-ink-muted hover:text-ink"
-                    }`}
-                  >
-                    {m === "driving" ? "Voiture" : "À pied"}
-                  </button>
-                ))}
-              </div>
+              {route && !routeLoading && (
+                <span className="ml-auto text-[10px] text-ink-subtle">
+                  vs {formatDistance(haversineDistance(linkTx!.lat, linkTx!.lng, linkRx!.lat, linkRx!.lng))} à vol d&apos;oiseau
+                </span>
+              )}
             </div>
             <p className="mt-1 text-[10px] text-ink-subtle">
               Trait bleu : trajet par la route · pointillé vert : liaison radio en
