@@ -9,6 +9,7 @@ import {
   Navigation,
   Radar,
   RadioTower,
+  Route,
   Ruler,
   Search,
   X,
@@ -19,6 +20,7 @@ import { DEFAULT_CENTER } from "@/lib/mapStyles";
 import { MAP_DEFAULTS } from "@/lib/mapConfig";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useNearbyAntennas } from "@/hooks/useNearbyAntennas";
+import { formatDuration, useRoute, type TravelMode } from "@/hooks/useRoute";
 
 // Leaflet manipule directement le DOM : la carte ne doit pas être rendue
 // côté serveur.
@@ -110,6 +112,24 @@ export default function MapView({
   const [realRadius, setRealRadius] = useState(5000);
   /** Distances depuis la position et cercles de repère kilométriques. */
   const [showDistances, setShowDistances] = useState(true);
+  /** Itinéraire routier entre l'émetteur et le récepteur sélectionnés. */
+  const [showRoute, setShowRoute] = useState(true);
+  const [travelMode, setTravelMode] = useState<TravelMode>("driving");
+
+  const linkTx = antennas.find((a) => a.id === linkTxId) ?? null;
+  const linkRx = antennas.find((a) => a.id === linkRxId) ?? null;
+  const hasLink = !!linkTx && !!linkRx && linkTx.id !== linkRx.id;
+
+  const {
+    route,
+    loading: routeLoading,
+    error: routeError,
+  } = useRoute(
+    hasLink ? { lat: linkTx!.lat, lng: linkTx!.lng } : null,
+    hasLink ? { lat: linkRx!.lat, lng: linkRx!.lng } : null,
+    travelMode,
+    showRoute && hasLink
+  );
 
   const {
     antennas: realAntennas,
@@ -167,6 +187,7 @@ export default function MapView({
           scans={scans}
           tileStyle={tileStyle}
           showDistances={showDistances}
+          route={route}
         />
       )}
 
@@ -197,6 +218,15 @@ export default function MapView({
             title="Distances et repères kilométriques"
             activeClass="bg-blue-600 text-white"
           />
+          {hasLink && (
+            <MapToggle
+              active={showRoute}
+              onClick={() => setShowRoute((v) => !v)}
+              icon={Route}
+              title="Itinéraire routier entre les deux antennes"
+              activeClass="bg-blue-600 text-white"
+            />
+          )}
           <MapToggle
             active={showCoverage}
             onClick={() => setShowCoverage((v) => !v)}
@@ -317,6 +347,57 @@ export default function MapView({
       )}
 
       <div className="absolute bottom-3 left-3 right-3 z-20">
+        {/* Bandeau d'itinéraire, à la manière d'une application de navigation */}
+        {hasLink && showRoute && (
+          <div className="panel mb-2 rounded-xl px-3 py-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] sm:text-xs">
+              <span className="flex items-center gap-1.5 font-medium text-ink">
+                <Route className="h-3.5 w-3.5 text-blue-600" />
+                {linkTx!.name} → {linkRx!.name}
+              </span>
+
+              {routeLoading && <span className="text-ink-muted">calcul de l&apos;itinéraire…</span>}
+
+              {route && !routeLoading && (
+                <>
+                  <span className="font-mono font-bold text-blue-600">
+                    {route.distanceMeters < 1000
+                      ? `${route.distanceMeters} m`
+                      : `${(route.distanceMeters / 1000).toFixed(1)} km`}
+                  </span>
+                  <span className="text-ink-muted">
+                    ≈ {formatDuration(route.durationSeconds)}
+                  </span>
+                </>
+              )}
+
+              {routeError && !routeLoading && (
+                <span className="text-status-warning">{routeError}</span>
+              )}
+
+              <div className="ml-auto flex gap-1">
+                {(["driving", "walking"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setTravelMode(m)}
+                    className={`rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+                      travelMode === m
+                        ? "bg-blue-600 text-white"
+                        : "bg-surface-overlay text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    {m === "driving" ? "Voiture" : "À pied"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="mt-1 text-[10px] text-ink-subtle">
+              Trait bleu : trajet par la route · pointillé vert : liaison radio en
+              ligne droite
+            </p>
+          </div>
+        )}
+
         <div className="panel rounded-xl px-3 py-2 text-[11px] text-ink-muted sm:text-xs">
           {userPosition ? (
             <span>

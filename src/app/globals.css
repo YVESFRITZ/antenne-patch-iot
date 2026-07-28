@@ -1,3 +1,8 @@
+/* Chargé globalement : si la feuille arrivait avec le composant carte,
+   Leaflet calculerait ses dimensions avant d'être stylé, d'où des tuiles
+   décalées au premier affichage. */
+@import "leaflet/dist/leaflet.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -92,6 +97,42 @@ body {
 .leaflet-container {
   font-family: inherit;
   background: #eef2f7;
+  /* Confine la carte sous l'interface : sans cela, ses panneaux et
+     commandes (jusqu'à z-index 1000) passent devant la barre d'outils
+     et les panneaux flottants de l'application. */
+  z-index: 0;
+}
+
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 400;
+}
+
+.leaflet-control {
+  z-index: 401;
+}
+
+/* Commandes de zoom accordées au reste de l'interface */
+.leaflet-bar {
+  border: 1px solid #e8edf4;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+  overflow: hidden;
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  width: 34px;
+  height: 34px;
+  line-height: 34px;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom-color: #e8edf4;
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .leaflet-popup-content-wrapper {
@@ -126,6 +167,34 @@ body {
 /* La flèche par défaut alourdit l'affichage quand les marqueurs sont serrés */
 .leaflet-tooltip.distance-label::before {
   display: none;
+}
+
+/* Itinéraire : pastille de distance et repères de départ / arrivée */
+.route-chip {
+  display: inline-block;
+  transform: translate(-50%, -50%);
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
+}
+
+.route-endpoint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
 }
 
 .leaflet-tooltip.distance-label--operator {

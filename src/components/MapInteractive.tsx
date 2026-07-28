@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils";
 import { MAP_DEFAULTS } from "@/lib/mapConfig";
 import type { GeoPosition } from "@/hooks/useGeolocation";
+import { formatDuration, type RouteResult } from "@/hooks/useRoute";
 
 interface MapInteractiveProps {
   center: { lat: number; lng: number };
@@ -32,6 +33,8 @@ interface MapInteractiveProps {
   scans?: ScanResult[];
   /** Fond de carte : plan ou vue satellite. */
   tileStyle?: "plan" | "satellite";
+  /** Itinéraire routier à tracer entre l'émetteur et le récepteur. */
+  route?: RouteResult | null;
   /** Affiche les distances depuis la position et les cercles de repère. */
   showDistances?: boolean;
 }
@@ -139,6 +142,7 @@ export default function MapInteractive({
   realAntennas = [],
   scans = [],
   tileStyle = "plan",
+  route = null,
   showDistances = true,
 }: MapInteractiveProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -175,9 +179,12 @@ export default function MapInteractive({
     const map = L.map(containerRef.current, {
       center: [center.lat, center.lng],
       zoom: MAP_DEFAULTS.zoom,
-      zoomControl: true,
+      // Zoom en bas à droite : en haut à gauche il entrait en conflit
+      // avec le panneau de filtres.
+      zoomControl: false,
       attributionControl: true,
     });
+    L.control.zoom({ position: "bottomright" }).addTo(map);
     mapRef.current = map;
     layerRef.current = L.layerGroup().addTo(map);
     userLayerRef.current = L.layerGroup().addTo(map);
@@ -230,6 +237,17 @@ export default function MapInteractive({
     // La couche vient d'être posée : s'assurer qu'elle couvre bien tout.
     map.invalidateSize({ animate: false });
   }, [tileStyle]);
+
+  // Cadrage automatique sur l'itinéraire dès qu'il est calculé, comme le
+  // fait une application de navigation.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !route || route.path.length < 2) return;
+    map.fitBounds(
+      L.latLngBounds(route.path.map((p) => [p.lat, p.lng] as [number, number])),
+      { padding: [50, 50], maxZoom: 16 }
+    );
+  }, [route]);
 
   // Recentrage : uniquement sur un déplacement franc, et en glissant
   // doucement. Reprendre la vue à chaque lecture GPS empêcherait
@@ -446,18 +464,87 @@ export default function MapInteractive({
     const tx = antennas.find((a) => a.id === linkTxId);
     const rx = antennas.find((a) => a.id === linkRxId);
     if (tx && rx && tx.id !== rx.id) {
+      const direct = haversineDistance(tx.lat, tx.lng, rx.lat, rx.lng);
+
+      // Itinéraire routier : tracé en deux passes, un liseré clair sous
+      // un trait coloré — c'est ce qui rend une route lisible sur
+      // n'importe quel fond de carte.
+      if (route && route.path.length > 1) {
+        const path = route.path.map((p) => [p.lat, p.lng] as [number, number]);
+
+        L.polyline(path, {
+          color: "#ffffff",
+          weight: 9,
+          opacity: 0.95,
+          lineJoin: "round",
+          lineCap: "round",
+        }).addTo(layer);
+
+        L.polyline(path, {
+          color: "#2563eb",
+          weight: 5,
+          opacity: 0.95,
+          lineJoin: "round",
+          lineCap: "round",
+        })
+          .bindPopup(
+            `<strong>Itinéraire</strong><br/>${formatDistance(route.distanceMeters)} par la route` +
+              `<br/>≈ ${formatDuration(route.durationSeconds)} de trajet`
+          )
+          .addTo(layer);
+
+        // Repère au milieu du trajet, comme sur une carte de navigation.
+        const middle = route.path[Math.floor(route.path.length / 2)];
+        L.marker([middle.lat, middle.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `<span class="route-chip">${formatDistance(route.distanceMeters)} · ${formatDuration(route.durationSeconds)}</span>`,
+            iconSize: [0, 0],
+          }),
+          interactive: false,
+          zIndexOffset: 650,
+        }).addTo(layer);
+      }
+
+      // Liaison radio : ligne droite, car les ondes ne suivent pas les
+      // routes. En pointillé pour la distinguer de l'itinéraire.
       L.polyline(
         [
           [tx.lat, tx.lng],
           [rx.lat, rx.lng],
         ],
-        { color: "#0d9488", weight: 3, opacity: 0.9 }
+        {
+          color: "#0d9488",
+          weight: 3,
+          opacity: 0.9,
+          dashArray: route ? "8 7" : undefined,
+        }
       )
         .bindPopup(
           `<strong>${tx.name} → ${rx.name}</strong><br/>` +
-            formatDistance(haversineDistance(tx.lat, tx.lng, rx.lat, rx.lng))
+            `Liaison radio directe : ${formatDistance(direct)}` +
+            (route
+              ? `<br/>Par la route : ${formatDistance(route.distanceMeters)} (${formatDuration(route.durationSeconds)})`
+              : "")
         )
         .addTo(layer);
+
+      // Repères de départ et d'arrivée.
+      for (const [point, letter, color] of [
+        [tx, "A", "#0d9488"],
+        [rx, "B", "#2563eb"],
+      ] as const) {
+        L.marker([point.lat, point.lng], {
+          icon: L.divIcon({
+            className: "",
+            html: `<span class="route-endpoint" style="background:${color}">${letter}</span>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11],
+          }),
+          interactive: false,
+          zIndexOffset: 900,
+        }).addTo(layer);
+      }
     }
     // La position brute est volontairement absente des dépendances :
     // seule la position figée (anchor) intervient ici.
@@ -471,6 +558,7 @@ export default function MapInteractive({
     selectedAntennaId,
     linkTxId,
     linkRxId,
+    route,
     showCoverage,
     showDistances,
     onSelectAntenna,
